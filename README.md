@@ -5,8 +5,6 @@
 JOBMATCH/
 ├── .gitignore
 ├── README.md
-├── requirements.txt
-├── build.py                                    # Master pipeline: preprocess → index → evaluate → demo
 │
 ├── data/
 │   └── raw/                                    # ← NOT tracked in git (see Data Setup below)
@@ -29,31 +27,14 @@ JOBMATCH/
 │           └── README.md
 │
 ├── scripts/
-│   ├── generate_figures.py                     # EDA figure generation for checkpoints
-│   └── preprocess.py                           # Data cleaning pipeline
-│
-├── engine/                                     # Core retrieval algorithms
-│   ├── __init__.py
-│   ├── bm25f.py                                # BM25F with multi-field weighting
-│   ├── semantic.py                             # Sentence-transformer embedding retrieval
-│   └── hybrid.py                               # Hybrid fusion (BM25F + semantic)
-│
-├── evaluation/                                 # Evaluation framework
-│   ├── generate_ground_truth.py                # LLM-based + category-based ground truth
-│   └── evaluate.py                             # NDCG@K, P@K, MAP metrics
-│
-├── figures/                                    # Generated EDA figures
-│   ├── corpus_overview.png
-│   ├── job_description_lengths.png
-│   ├── job_levels.png
-│   ├── resume_categories.png
-│   ├── resume_lengths.png
-│   └── top_skills.png
-│
-├── docs/                                       # Checkpoint deliverables
-│   └── Checkpoint1_Data.pdf
-│
-└── app/                                        # Web app (Checkpoint 3)
+│   └── generate_figures.py                     # EDA figure generation for checkpoints
+└── figures/                                    # Generated EDA figures
+   ├── corpus_overview.png
+   ├── job_description_lengths.png
+   ├── job_levels.png
+   ├── resume_categories.png
+   ├── resume_lengths.png
+   └── top_skills.png
 ```
  
 ## Data Setup
