@@ -7,20 +7,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from collections import Counter
 
-# CONFIG
 ARSHKON_POSTINGS = "data/raw/postings.csv/postings.csv"
-
 ASANICZKA_POSTINGS = "data/raw/linkedin_job_postings.csv/linkedin_job_postings.csv"
 ASANICZKA_SKILLS   = "data/raw/job_skills.csv/job_skills.csv"
-
 SNEHAANBHAWAL_RESUMES = "data/raw/Resume/Resume.csv"
-
 FLOREX_RESUMES = "data/raw/resume_corpus-master/resume_samples/resume_samples.txt"
-
-# Output directory for figures
 FIG_DIR = "figures"
-
-# STYLING
 
 plt.rcParams.update({
     'figure.dpi': 200,
@@ -53,15 +45,11 @@ def strip_html(text):
     return re.sub(r'<[^>]+>', ' ', text).strip()
 
 
-# LOADERS
-
 def load_arshkon():
-    """Load arshkon/linkedin-job-postings."""
     print(f"Loading arshkon postings from {ARSHKON_POSTINGS}...")
     df = pd.read_csv(ARSHKON_POSTINGS)
     print(f"  Loaded {len(df):,} rows, columns: {list(df.columns[:8])}...")
 
-    # Compute word counts on description
     if 'description' in df.columns:
         df['word_count'] = df['description'].apply(word_count)
     else:
@@ -72,7 +60,6 @@ def load_arshkon():
 
 
 def load_asaniczka():
-    """Load asaniczka/1.3M-linkedin-jobs-and-skills."""
     print(f"Loading asaniczka postings from {ASANICZKA_POSTINGS}...")
     cols_to_try = ['job_link', 'job_title', 'company', 'job_location', 'job_level', 'job_type']
 
@@ -93,7 +80,6 @@ def load_asaniczka():
 
 
 def load_snehaanbhawal():
-    """Load snehaanbhawal/resume-dataset."""
     print(f"Loading snehaanbhawal resumes from {SNEHAANBHAWAL_RESUMES}...")
     df = pd.read_csv(SNEHAANBHAWAL_RESUMES)
     print(f"  Loaded {len(df):,} rows, columns: {list(df.columns)}")
@@ -107,10 +93,6 @@ def load_snehaanbhawal():
 
 
 def load_florex():
-    """
-    Load florex/resume_corpus from resume_samples.txt.
-    Format per line: id:::occupation1;occupation2:::resume_text
-    """
     print(f"Loading florex resumes from {FLOREX_RESUMES}...")
     records = []
     with open(FLOREX_RESUMES, 'r', encoding='utf-8', errors='replace') as f:
@@ -123,12 +105,13 @@ def load_florex():
                 rid = parts[0].strip()
                 occupations = [o.strip() for o in parts[1].split(';') if o.strip()]
                 text = parts[2].strip()
+                text_clean = strip_html(text)
                 records.append({
                     'id': rid,
                     'occupations': occupations,
                     'occupation_str': parts[1].strip(),
-                    'text': text,
-                    'word_count': word_count(text),
+                    'text': text_clean,
+                    'word_count': word_count(text_clean),
                     'num_labels': len(occupations),
                 })
 
@@ -137,10 +120,7 @@ def load_florex():
     return df
 
 
-# FIGURE GENERATORS
-
 def fig1_corpus_overview(arshkon_n, asaniczka_n, sneha_n, florex_n):
-    """Bar chart showing total corpus sizes across all 4 datasets."""
     labels = [
         f'arshkon\nJob Posts\n({arshkon_n:,})',
         f'asaniczka\nJob Posts\n({asaniczka_n:,})',
@@ -153,7 +133,6 @@ def fig1_corpus_overview(arshkon_n, asaniczka_n, sneha_n, florex_n):
     fig, ax = plt.subplots(figsize=(7, 4))
     bars = ax.bar(labels, counts, color=colors, alpha=0.85, width=0.6, edgecolor='white', linewidth=1.5)
 
-    # Add count labels on bars
     for bar, count in zip(bars, counts):
         ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(counts)*0.02,
                 f'{count:,}', ha='center', va='bottom', fontsize=10, fontweight='bold')
@@ -174,7 +153,6 @@ def fig1_corpus_overview(arshkon_n, asaniczka_n, sneha_n, florex_n):
 
 
 def fig2_job_description_lengths(arshkon_df):
-    """Histogram of job description word counts (arshkon dataset)."""
     wc = arshkon_df['word_count'].dropna()
     wc = wc[wc > 0]
 
@@ -202,10 +180,8 @@ def fig2_job_description_lengths(arshkon_df):
 
 
 def fig3_resume_lengths(sneha_df, florex_df):
-    """Side-by-side histograms of resume word counts from both resume datasets."""
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7, 3.5))
 
-    # snehaanbhawal
     wc1 = sneha_df['word_count'].dropna()
     wc1 = wc1[wc1 > 0]
     ax1.hist(wc1, bins=40, color=C_ORANGE, alpha=0.8, edgecolor='white', linewidth=0.3)
@@ -218,7 +194,6 @@ def fig3_resume_lengths(sneha_df, florex_df):
     ax1.spines['top'].set_visible(False)
     ax1.spines['right'].set_visible(False)
 
-    # florex
     wc2 = florex_df['word_count'].dropna()
     wc2 = wc2[wc2 > 0]
     ax2.hist(wc2, bins=40, color=C_RED, alpha=0.8, edgecolor='white', linewidth=0.3)
@@ -241,7 +216,6 @@ def fig3_resume_lengths(sneha_df, florex_df):
 
 
 def fig4_resume_categories(sneha_df):
-    """Bar chart of snehaanbhawal resume categories (24 labels)."""
     cats = sneha_df['Category'].value_counts()
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
@@ -263,8 +237,6 @@ def fig4_resume_categories(sneha_df):
 
 
 def fig5_top_skills(skills_df):
-    """Top 20 most common skills from asaniczka job_skills.csv."""
-    # Column is likely 'job_skills' or 'skill'
     skill_col = None
     for candidate in ['job_skills', 'skill', 'skills']:
         if candidate in skills_df.columns:
@@ -276,7 +248,15 @@ def fig5_top_skills(skills_df):
         print("  Skipping skills figure.")
         return None
 
-    top = skills_df[skill_col].value_counts().head(20)
+    all_skills = (
+        skills_df[skill_col]
+        .dropna()
+        .str.split(',')
+        .explode()
+        .str.strip()
+        .loc[lambda s: s != '']
+    )
+    top = all_skills.value_counts().head(20)
 
     fig, ax = plt.subplots(figsize=(7, 4.5))
     bars = ax.barh(range(len(top)), top.values, color=C_GREEN, alpha=0.85, height=0.7)
@@ -297,7 +277,6 @@ def fig5_top_skills(skills_df):
 
 
 def fig6_job_level_distribution(asaniczka_df):
-    """Pie/bar chart of job level (seniority) distribution from asaniczka."""
     if 'job_level' not in asaniczka_df.columns:
         print("  Skipping job level figure — column not found.")
         return None
@@ -327,12 +306,9 @@ def fig6_job_level_distribution(asaniczka_df):
     return path
 
 
-# MAIN
-
 def main():
     os.makedirs(FIG_DIR, exist_ok=True)
 
-    # Track what loaded successfully
     arshkon_df = None
     asaniczka_df = None
     skills_df = None
@@ -362,7 +338,6 @@ def main():
     print("\n--- Generating Figures ---\n")
     generated = []
 
-    # Fig 1: Corpus overview
     arshkon_n  = len(arshkon_df)  if arshkon_df is not None else 0
     asaniczka_n = len(asaniczka_df) if asaniczka_df is not None else 0
     sneha_n    = len(sneha_df)    if sneha_df is not None else 0
@@ -371,15 +346,12 @@ def main():
     if any([arshkon_n, asaniczka_n, sneha_n, florex_n]):
         generated.append(fig1_corpus_overview(arshkon_n, asaniczka_n, sneha_n, florex_n))
 
-    # Fig 2: Job description lengths (arshkon has full descriptions)
     if arshkon_df is not None:
         generated.append(fig2_job_description_lengths(arshkon_df))
 
-    # Fig 3: Resume lengths (both resume datasets)
     if sneha_df is not None and florex_df is not None:
         generated.append(fig3_resume_lengths(sneha_df, florex_df))
     elif sneha_df is not None:
-        # Fallback: just snehaanbhawal
         fig, ax = plt.subplots(figsize=(6, 3))
         wc = sneha_df['word_count'].dropna()
         wc = wc[wc > 0]
@@ -398,17 +370,14 @@ def main():
         generated.append(p)
         print(f"  Saved: {p}")
 
-    # Fig 4: Resume categories (snehaanbhawal has 24 labels)
     if sneha_df is not None and 'Category' in sneha_df.columns:
         generated.append(fig4_resume_categories(sneha_df))
 
-    # Fig 5: Top skills (asaniczka)
     if skills_df is not None:
         result = fig5_top_skills(skills_df)
         if result:
             generated.append(result)
 
-    # Fig 6: Job levels (asaniczka)
     if asaniczka_df is not None:
         result = fig6_job_level_distribution(asaniczka_df)
         if result:
@@ -427,9 +396,6 @@ def main():
     print("  Figures generated:")
     for p in generated:
         print(f"    - {p}")
-
-    print(f"\n  Paste these into your 1-page Checkpoint PDF.")
-    print(f"  Pick 2-3 that best show the data characteristics.")
 
 
 if __name__ == '__main__':

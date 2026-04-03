@@ -1,0 +1,26 @@
+# Core dependencies
+pandas>=2.0
+numpy>=1.24
+matplotlib>=3.7
+
+# IR Engine
+# (no external deps - pure Python BM25F implementation)
+
+# Semantic retrieval (optional, needed for hybrid mode)
+sentence-transformers>=2.2
+torch>=2.0
+
+# PDF generation (checkpoint documents)
+reportlab>=4.0
+
+# Ground truth generation (optional, pick one)
+# openai>=1.0        # For GPT-based relevance scoring
+# anthropic>=0.18    # For Claude-based relevance scoring
+
+# Web app (Checkpoint 3+)
+flask>=3.0
+flask-cors>=4.0
+
+# NLP preprocessing (optional enhancements)
+# nltk>=3.8
+# spacy>=3.7
