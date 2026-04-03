@@ -48,3 +48,9 @@ CLAUDE.md
 # ── Generated outputs ─────────────────────────────────────────
 eval_output.txt
 output.txt
+
+# ── Docs (only keep checkpoint deliverables) ──────────────────
+docs/*
+!docs/CSCE 470 Project Checkpoint - Data.pdf
+!docs/Proposal JobMatch.pdf
+!docs/project-requirements (1).pdf
