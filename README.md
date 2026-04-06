@@ -24,7 +24,7 @@ Each engine includes a self-contained demo using synthetic data. Run these immed
 ```bash
 python engine/bm25f.py          # BM25F index + ranked retrieval on 5 synthetic jobs
 python engine/semantic.py       # Semantic embedding search (requires sentence-transformers)
-python engine/hybrid.py         # BM25F-only fallback, or full hybrid if sentence-transformers installed
+python -m engine.hybrid         # BM25F-only fallback, or full hybrid if sentence-transformers installed
 python evaluation/evaluate.py   # Sanity check: P@K, NDCG@K, AP on synthetic rankings
 ```
 
