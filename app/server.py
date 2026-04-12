@@ -18,7 +18,7 @@ def create_app() -> Flask:
 		return render_template(
 			"results.html",
 			title="Jobs matched to resume",
-			details="Matching engine wiring comes next.",
+			details="Results shown here",
 			payload=_summarize_submission(),
 		)
 
@@ -27,7 +27,7 @@ def create_app() -> Flask:
 		return render_template(
 			"results.html",
 			title="Resumes matched to job",
-			details="Matching engine wiring comes next.",
+			details="Results shown here",
 			payload=_summarize_submission(),
 		)
 
@@ -39,9 +39,7 @@ def _summarize_submission() -> dict:
 	file = request.files.get("pdf")
 	return {
 		"text_chars": len(text),
-		"has_pdf": bool(file and getattr(file, "filename", "")),
-		"mode": (request.form.get("mode") or "").strip(),
-		"top_k": (request.form.get("top_k") or "").strip(),
+		"has_pdf": bool(file and getattr(file, "filename", ""))
 	}
 
 
