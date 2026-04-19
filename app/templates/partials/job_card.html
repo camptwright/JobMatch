@@ -1,6 +1,6 @@
 <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
   <div class="flex items-start justify-between gap-4">
-    <div class="min-w-0">
+    <div class="min-w-0 flex-1">
       {% set title = job.title | default("Untitled job") %}
       {% set url = job.url | default("") %}
 
@@ -18,20 +18,25 @@
         <div class="truncate text-base font-semibold text-slate-900" title="{{ title }}">{{ title }}</div>
       {% endif %}
 
-      {% if job.company or job.location or job.category %}
-        <div class="mt-1 truncate text-sm text-slate-600">
-          {% if job.company %}{{ job.company }}{% endif %}
-          {% if job.company and (job.location or job.category) %} · {% endif %}
-          {% if job.location %}{{ job.location }}{% endif %}
-          {% if job.location and job.category %} · {% endif %}
-          {% if job.category %}{{ job.category }}{% endif %}
-        </div>
-      {% else %}
-        <div class="mt-1 text-sm text-slate-600">Job posting</div>
-      {% endif %}
+      <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-600">
+        {% if job.company %}<span>{{ job.company }}</span>{% endif %}
+        {% if job.company and job.location %}<span class="text-slate-300">&middot;</span>{% endif %}
+        {% if job.location %}<span>{{ job.location }}</span>{% endif %}
+        {% if (job.company or job.location) and job.category %}<span class="text-slate-300">&middot;</span>{% endif %}
+        {% if job.category %}
+          <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+            {{ job.category }}
+          </span>
+        {% endif %}
+      </div>
     </div>
 
-    <div class="shrink-0">
+    <div class="shrink-0 flex flex-col items-end gap-2">
+      {% if job.score is defined %}
+        <span class="text-xs font-medium text-slate-500">
+          {{ (job.score * 100) | round(1) if job.score <= 1 else job.score | round(3) }}{% if job.score <= 1 %}%{% endif %} match
+        </span>
+      {% endif %}
       {% if url %}
         <a
           class="inline-flex items-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
@@ -39,12 +44,8 @@
           target="_blank"
           rel="noopener noreferrer"
         >
-          Open
+          Search LinkedIn
         </a>
-      {% else %}
-        <span class="inline-flex items-center rounded-lg bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700">
-          No link
-        </span>
       {% endif %}
     </div>
   </div>

@@ -283,11 +283,13 @@ def build_resume_index(resumes_csv, field_configs=None):
 
 	for i, row in enumerate(df.itertuples(index=False)):
 		doc_id = int(getattr(row, 'ID') if has_id else i)
+		full_text = str(getattr(row, 'resume_clean') if has_resume_clean else getattr(row, 'Resume_str', ''))
 		fields = {
-			'resume_text': str(getattr(row, 'resume_clean') if has_resume_clean else getattr(row, 'Resume_str', '')),
+			'resume_text': full_text,
 		}
 		metadata = {
 			'category': str(getattr(row, 'Category', '')),
+			'text': full_text[:600],
 		}
 		idx.add_document(doc_id, fields, metadata)
 

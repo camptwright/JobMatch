@@ -6,17 +6,16 @@
   <div class="mb-6">
     <h1 class="text-2xl font-semibold">Match jobs and resumes</h1>
     <p class="mt-2 text-slate-600">
-      Paste text or upload a PDF
+      Paste text or upload a PDF. Ranked by hybrid BM25F + semantic relevance.
     </p>
   </div>
 
   <div class="grid gap-6 md:grid-cols-2">
+    {# ── Resume → Jobs ───────────────────────────────────────── #}
     <section class="rounded-xl border bg-white p-5 shadow-sm">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-semibold">Search with Resume</h2>
-          <p class="mt-1 text-sm text-slate-600">Find jobs that best match a resume.</p>
-        </div>
+      <div>
+        <h2 class="text-lg font-semibold">Search with Resume</h2>
+        <p class="mt-1 text-sm text-slate-600">Find jobs that best match a candidate's resume.</p>
       </div>
 
       <form
@@ -24,6 +23,7 @@
         method="post"
         action="/match/jobs"
         enctype="multipart/form-data"
+        onsubmit="handleSubmit(this)"
       >
         <label class="block">
           <div class="text-sm font-medium">Paste resume text</div>
@@ -31,7 +31,7 @@
             name="text"
             class="mt-1 w-full rounded-lg border border-slate-300 bg-white p-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
             rows="7"
-            placeholder="Skills, experience, summary..."
+            placeholder="Skills, experience, education, summary..."
           ></textarea>
         </label>
 
@@ -47,19 +47,24 @@
 
         <button
           type="submit"
-          class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          class="submit-btn inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
         >
-          Find matching jobs
+          <span class="btn-label">Find matching jobs</span>
+          <span class="btn-loading hidden ml-2">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </span>
         </button>
       </form>
     </section>
 
+    {# ── Job → Resumes ───────────────────────────────────────── #}
     <section class="rounded-xl border bg-white p-5 shadow-sm">
-      <div class="flex items-start justify-between gap-4">
-        <div>
-          <h2 class="text-lg font-semibold">Search with Job</h2>
-          <p class="mt-1 text-sm text-slate-600">Find resumes that best match a job description.</p>
-        </div>
+      <div>
+        <h2 class="text-lg font-semibold">Search with Job</h2>
+        <p class="mt-1 text-sm text-slate-600">Find resumes that best match a job description.</p>
       </div>
 
       <form
@@ -67,6 +72,7 @@
         method="post"
         action="/match/resumes"
         enctype="multipart/form-data"
+        onsubmit="handleSubmit(this)"
       >
         <label class="block">
           <div class="text-sm font-medium">Paste job description</div>
@@ -90,11 +96,28 @@
 
         <button
           type="submit"
-          class="inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          class="submit-btn inline-flex items-center justify-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-60"
         >
-          Find matching resumes
+          <span class="btn-label">Find matching resumes</span>
+          <span class="btn-loading hidden ml-2">
+            <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+          </span>
         </button>
       </form>
     </section>
   </div>
+
+  <script>
+    function handleSubmit(form) {
+      const btn = form.querySelector('.submit-btn');
+      const label = form.querySelector('.btn-label');
+      const spinner = form.querySelector('.btn-loading');
+      if (btn) btn.disabled = true;
+      if (label) label.textContent = 'Searching\u2026';
+      if (spinner) spinner.classList.remove('hidden');
+    }
+  </script>
 {% endblock %}

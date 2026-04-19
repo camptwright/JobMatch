@@ -126,7 +126,9 @@ def build_resume_semantic_index(resumes_csv, model_name='all-MiniLM-L6-v2', devi
 
 	doc_ids = df[id_col].astype(int).tolist() if id_col else list(range(len(df)))
 	texts = df[text_col].fillna('').astype(str).str[:1000].tolist()
-	metadata = df[['Category']].rename(columns={'Category': 'category'}).fillna('').astype(str).to_dict('records')
+	snippets = df[text_col].fillna('').astype(str).str[:600].tolist()
+	categories = df['Category'].fillna('').astype(str).tolist() if 'Category' in df.columns else [''] * len(df)
+	metadata = [{'category': c, 'text': t} for c, t in zip(categories, snippets)]
 
 	idx = SemanticIndex(model_name=model_name, device=device)
 	idx.encode_documents(doc_ids, texts, metadata)

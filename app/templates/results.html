@@ -3,74 +3,45 @@
 {% block title %}JobMatch | Results{% endblock %}
 
 {% block content %}
-  {# UI-only fallback: render sample cards until backend passes real `results`. #}
-  {% set inferred_type = result_type if result_type is defined else (
-    'jobs' if title is defined and title and 'Jobs' in title else
-    'resumes' if title is defined and title and 'Resumes' in title else
-    'jobs'
-  ) %}
-
-  {% set has_results = results is defined and results and (results|length > 0) %}
-
-  {% if has_results %}
-    {% set items = results %}
-  {% else %}
-    {% if inferred_type == 'jobs' %}
-      {% set items = [
-        {'title': 'Software Engineer (Python) — Search & Retrieval', 'url': 'https://www.linkedin.com/jobs/view/0000000001'},
-        {'title': 'Machine Learning Engineer — NLP', 'url': 'https://www.linkedin.com/jobs/view/0000000002'},
-        {'title': 'Backend Engineer — Flask APIs', 'url': 'https://www.linkedin.com/jobs/view/0000000003'},
-        {'title': 'Data Scientist — Recommender Systems', 'url': 'https://www.linkedin.com/jobs/view/0000000004'},
-        {'title': 'Full-Stack Developer — React + Python', 'url': 'https://www.linkedin.com/jobs/view/0000000005'},
-        {'title': 'DevOps Engineer — CI/CD', 'url': 'https://www.linkedin.com/jobs/view/0000000006'},
-        {'title': 'Security Engineer — Application Security', 'url': 'https://www.linkedin.com/jobs/view/0000000007'},
-        {'title': 'Software Engineer — Distributed Systems', 'url': 'https://www.linkedin.com/jobs/view/0000000008'},
-        {'title': 'Data Engineer — Pipelines & Warehousing', 'url': 'https://www.linkedin.com/jobs/view/0000000009'},
-        {'title': 'Frontend Engineer — Accessibility', 'url': 'https://www.linkedin.com/jobs/view/0000000010'},
-      ] %}
-    {% else %}
-      {% set items = [
-        {'resume_id': 101, 'name': 'Alex Johnson', 'text': 'ALEX JOHNSON\nAustin, TX | alex.johnson@email.com | (555) 123-4567\n\nSUMMARY\nSoftware engineer with experience in Python, Flask, and search.\n\nSKILLS\nPython, Flask, SQL, Docker, Git\n\nEXPERIENCE\n- Built internal job matching tools and APIs.\n- Improved ranking quality with BM25 + embeddings.\n'},
-        {'resume_id': 102, 'name': 'Taylor Smith', 'text': 'TAYLOR SMITH\nDallas, TX | taylor.smith@email.com\n\nSUMMARY\nData scientist focused on NLP and model evaluation.\n\nSKILLS\nPython, Pandas, scikit-learn, Transformers\n\nPROJECTS\n- Resume/job semantic similarity and retrieval evaluation.\n'},
-        {'resume_id': 103, 'name': 'Jordan Lee', 'text': 'JORDAN LEE\nHouston, TX\n\nSUMMARY\nBackend engineer with API design and systems experience.\n\nSKILLS\nPython, REST, Flask, Postgres, AWS\n'},
-        {'resume_id': 104, 'name': 'Morgan Davis', 'text': 'MORGAN DAVIS\nSan Antonio, TX\n\nSUMMARY\nFull-stack developer with React + Python.\n\nSKILLS\nReact, TypeScript, Python, Flask\n'},
-        {'resume_id': 105, 'name': 'Casey Brown', 'text': 'CASEY BROWN\n\nSUMMARY\nDevOps engineer with CI/CD and Docker.\n\nSKILLS\nDocker, GitHub Actions, Linux\n'},
-        {'resume_id': 106, 'name': 'Riley Nguyen', 'text': 'RILEY NGUYEN\n\nSUMMARY\nSecurity-minded engineer focused on appsec.\n\nSKILLS\nOWASP, SAST, Python\n'},
-        {'resume_id': 107, 'name': 'Sam Patel', 'text': 'SAM PATEL\n\nSUMMARY\nData engineer with ETL and warehousing.\n\nSKILLS\nSQL, Airflow, Python\n'},
-        {'resume_id': 108, 'name': 'Jamie Martinez', 'text': 'JAMIE MARTINEZ\n\nSUMMARY\nFrontend engineer focused on accessibility.\n\nSKILLS\nHTML, CSS, ARIA, React\n'},
-        {'resume_id': 109, 'name': 'Drew Wilson', 'text': 'DREW WILSON\n\nSUMMARY\nML engineer building production pipelines.\n\nSKILLS\nPyTorch, Kubernetes, Python\n'},
-        {'resume_id': 110, 'name': 'Avery Chen', 'text': 'AVERY CHEN\n\nSUMMARY\nProduct-minded engineer with UX collaboration.\n\nSKILLS\nReact, Python, Communication\n'},
-      ] %}
-    {% endif %}
-  {% endif %}
-
   <div class="mb-4">
     <a
       href="/"
       class="inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 hover:bg-slate-50"
     >
-      ← Back
+      &larr; Back
     </a>
   </div>
 
   <div class="mb-6">
     <div class="text-2xl font-semibold leading-7 text-slate-900">{{ title | default("Results") }}</div>
     <div class="mt-1 text-sm text-slate-600">
-      Showing top 10 matches.
+      {% if results and results | length > 0 %}
+        Showing {{ results | length }} result{{ 's' if results | length != 1 else '' }}, ranked by relevance.
+      {% else %}
+        No matches found. Try broadening your query or adding more detail.
+      {% endif %}
     </div>
   </div>
 
-  <div class="grid gap-4">
-    {% if inferred_type == 'jobs' %}
-      {% for item in items[:10] %}
-        {% set job = item %}
-        {% include "partials/job_card.html" %}
-      {% endfor %}
-    {% else %}
-      {% for item in items[:10] %}
-        {% set resume = item %}
-        {% include "partials/resume_card.html" %}
-      {% endfor %}
-    {% endif %}
-  </div>
+  {% if results and results | length > 0 %}
+    <div class="grid gap-4">
+      {% if result_type == 'jobs' %}
+        {% for item in results %}
+          {% set job = item %}
+          {% include "partials/job_card.html" %}
+        {% endfor %}
+      {% else %}
+        {% for item in results %}
+          {% set resume = item %}
+          {% include "partials/resume_card.html" %}
+        {% endfor %}
+      {% endif %}
+    </div>
+  {% else %}
+    <div class="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
+      <div class="text-4xl mb-3">&#x1F50D;</div>
+      <div class="font-medium text-slate-700">No matches found</div>
+      <div class="mt-1 text-sm">Try adding more skills, experience, or keywords to your query.</div>
+    </div>
+  {% endif %}
 {% endblock %}

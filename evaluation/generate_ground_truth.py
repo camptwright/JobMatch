@@ -8,6 +8,12 @@ import random
 
 import pandas as pd
 
+try:
+	from dotenv import load_dotenv
+	load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+except ImportError:
+	pass
+
 
 _RELATED_CATEGORY_PAIRS = {
 	frozenset({'Engineering', 'Information-Technology'}),
@@ -61,30 +67,6 @@ def score_with_openai(resume_text, job_title, job_description, model='gpt-4o-min
 		return 0
 
 
-def score_with_anthropic(resume_text, job_title, job_description, model='claude-sonnet-4-6'):
-	import anthropic
-
-	client = anthropic.Anthropic()
-	prompt = RELEVANCE_PROMPT.format(
-		resume_text=resume_text[:2000],
-		job_title=job_title,
-		job_description=job_description[:1000],
-	)
-
-	response = client.messages.create(
-		model=model,
-		max_tokens=5,
-		messages=[{'role': 'user', 'content': prompt}],
-	)
-
-	text = response.content[0].text.strip()
-	try:
-		grade = int(text[0])
-		return min(max(grade, 0), 3)
-	except (ValueError, IndexError):
-		return 0
-
-
 def generate_ground_truth(resumes_csv, jobs_csv, output_path, num_queries=50, top_k=20, api='openai', seed=42):
 	random.seed(seed)
 
@@ -112,7 +94,7 @@ def generate_ground_truth(resumes_csv, jobs_csv, output_path, num_queries=50, to
 
 	print('Selected {} query resumes across {} categories'.format(len(sampled_resumes), len(categories)))
 
-	score_fn = score_with_openai if api == 'openai' else score_with_anthropic
+	score_fn = score_with_openai
 
 	judgments = []
 	total_pairs = 0
@@ -234,7 +216,11 @@ def generate_category_ground_truth(resumes_csv, jobs_csv, output_path, num_queri
 
 
 def generate_pooled_ground_truth(resumes_csv, jobs_csv, output_path, bm25f_index_path,
+                                  semantic_index_dir=None,
                                   num_queries=50, top_k=20, n_random_negatives=5, seed=42):
+	"""Build a pooled ground truth by retrieving candidates from BM25F and (optionally)
+	semantic indexes, then assigning category-based relevance grades.  Pooling from
+	both systems prevents the evaluation from being biased toward BM25F."""
 	sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 	from engine.bm25f import BM25FIndex
 
@@ -251,8 +237,17 @@ def generate_pooled_ground_truth(resumes_csv, jobs_csv, output_path, bm25f_index
 		category_map = {}
 
 	print('Loading BM25F index from {}...'.format(bm25f_index_path))
-	idx = BM25FIndex.load(bm25f_index_path)
-	print('Loaded {:,} docs'.format(idx.N))
+	bm25_idx = BM25FIndex.load(bm25f_index_path)
+	print('Loaded {:,} docs'.format(bm25_idx.N))
+
+	sem_idx = None
+	if semantic_index_dir and os.path.isdir(semantic_index_dir):
+		try:
+			from engine.semantic import SemanticIndex
+			sem_idx = SemanticIndex.load(semantic_index_dir)
+			print('Loaded semantic index ({:,} docs)'.format(len(sem_idx.doc_ids)))
+		except Exception as e:
+			print('Warning: could not load semantic index: {}'.format(e))
 
 	categories = resumes_df['Category'].unique()
 	sampled = []
@@ -275,19 +270,23 @@ def generate_pooled_ground_truth(resumes_csv, jobs_csv, output_path, bm25f_index
 		mapped_cat = category_map.get(resume_cat, resume_cat)
 		query_text = resume.get('resume_clean', resume.get('Resume_str', ''))
 
-		retrieved = idx.search(query_text, top_k=top_k)
-		candidate_ids = [doc_id for doc_id, _ in retrieved]
+		# Pool candidates from BM25F
+		candidate_set = set(doc_id for doc_id, _ in bm25_idx.search(query_text, top_k=top_k))
 
-		candidate_set = set(candidate_ids)
+		# Pool candidates from semantic index if available
+		if sem_idx is not None:
+			for doc_id, _ in sem_idx.search(query_text, top_k=top_k):
+				candidate_set.add(doc_id)
+
+		# Add random negatives for coverage
 		neg_pool = [jid for jid in all_job_ids if jid not in candidate_set]
-		neg_sample = random.sample(neg_pool, min(n_random_negatives, len(neg_pool)))
-		candidate_ids.extend(neg_sample)
+		candidate_set.update(random.sample(neg_pool, min(n_random_negatives, len(neg_pool))))
 
 		if (qi + 1) % 10 == 0 or qi == 0:
 			print('  [{}/{}] Resume {} ({}): {} candidates'.format(
-				qi + 1, len(sampled), resume_id, resume_cat, len(candidate_ids)))
+				qi + 1, len(sampled), resume_id, resume_cat, len(candidate_set)))
 
-		for doc_id in candidate_ids:
+		for doc_id in candidate_set:
 			job = jobs_by_id.get(doc_id, {})
 			job_cat = str(job.get('job_category', ''))
 			grade = 3 if job_cat == mapped_cat else 0
@@ -317,7 +316,7 @@ if __name__ == '__main__':
 	parser.add_argument('--resumes', default='data/processed/resumes_clean.csv')
 	parser.add_argument('--jobs', default='data/processed/jobs_clean.csv')
 	parser.add_argument('--output', default='evaluation/ground_truth.csv')
-	parser.add_argument('--api', choices=['openai', 'anthropic', 'category'], default='category')
+	parser.add_argument('--api', choices=['openai', 'category'], default='category')
 	parser.add_argument('--num-queries', type=int, default=50)
 	parser.add_argument('--top-k', type=int, default=20)
 	parser.add_argument('--seed', type=int, default=42)

@@ -1,0 +1,25 @@
+app = "jobmatch"
+primary_region = "dfw"
+
+# No Dockerfile — Fly.io auto-detects Python via nixpacks and installs requirements.txt.
+# The [processes] block below defines the start command directly.
+[build]
+
+[processes]
+  app = "gunicorn app.server:app --bind 0.0.0.0:8080 --timeout 120 --workers 1"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "1gb"
+  cpu_kind = "shared"
+  cpus = 1

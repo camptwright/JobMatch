@@ -1,135 +1,121 @@
 # JobMatch — Resume & Job Retrieval System
 
-CSCE 470 (Information Storage & Retrieval), Spring 2026, Texas A&M University.
+CSCE 470 (Information Storage & Retrieval), Spring 2026, Texas A&M University.  
 Team: Brayden Bailey, Campbell Wright.
 
-Bidirectional retrieval system: upload a resume to find matching jobs, or paste a job description to find matching resumes. Built on BM25F + semantic embeddings (all-MiniLM-L6-v2), with a hybrid fusion mode combining both.
+Bidirectional retrieval: upload a resume to find matching jobs, or paste a job description to find matching resumes. Built on BM25F (field-weighted inverted index) + semantic embeddings (`all-MiniLM-L6-v2`), fused in a hybrid mode.
 
 ---
 
-## Setup
+## Quick Start
 
 ```bash
 pip install -r requirements.txt
 ```
 
-`sentence-transformers` and `torch` are required for semantic and hybrid modes. BM25F works without them.
-
----
-
-## Quick Test (no data download required)
-
-Each engine includes a self-contained demo using synthetic data. Run these immediately after install to verify the algorithms work:
+Verify the algorithms work immediately (no data needed):
 
 ```bash
-python engine/bm25f.py          # BM25F index + ranked retrieval on 5 synthetic jobs
-python engine/semantic.py       # Semantic embedding search (requires sentence-transformers)
-python -m engine.hybrid         # BM25F-only fallback, or full hybrid if sentence-transformers installed
-python evaluation/evaluate.py   # Sanity check: P@K, NDCG@K, AP on synthetic rankings
+python engine/bm25f.py          # BM25F ranked retrieval — 5 synthetic jobs
+python engine/semantic.py       # Semantic embedding search
+python -m engine.hybrid         # Hybrid fusion
+python evaluation/evaluate.py   # NDCG / MAP / P@K sanity check
 ```
 
-Expected output from `python engine/bm25f.py`:
-
-```
-BM25F index built: 5 docs, 64 unique terms
-
-Query: 'python machine learning engineer'
-  1. [1.981] Machine Learning Engineer
-  2. [0.914] Senior Python Developer
-  3. [0.710] Data Scientist
-...
-```
-
----
-
-## Full Pipeline (with real data)
-
-### 1. Download datasets
-
-Place the following in `data/raw/`:
-
-| Dataset | Source | Records | Path |
-|---------|--------|---------|------|
-| Job Postings (arshkon) | [Kaggle](https://www.kaggle.com/datasets/arshkon/linkedin-job-postings) | 123,849 | `data/raw/postings.csv/postings.csv` |
-| Job Posts + Skills (asaniczka) | [Kaggle](https://www.kaggle.com/datasets/asaniczka/1-3m-linkedin-jobs-and-skills-2024) | 1.3M | `data/raw/linkedin_job_postings.csv/linkedin_job_postings.csv` |
-| Resumes (snehaanbhawal) | [Kaggle](https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset) | 2,484 | `data/raw/Resume/Resume.csv` |
-| Resumes (florex) | [GitHub](https://github.com/florex/resume_corpus) | 29,783 | `data/raw/resume_corpus-master/` |
-
-Raw data is not tracked in git (too large).
-
-### 2. Run the pipeline
-
-```bash
-python build.py --step preprocess   # Clean raw CSVs -> data/processed/
-python build.py --step index        # Build BM25F + semantic indexes -> data/indexes/
-python build.py --step evaluate     # Generate ground truth + compute metrics
-python build.py --step demo         # Interactive CLI search demo
-python build.py --step all          # Run all steps in order
-```
-
-**Note on semantic indexing:** Encoding 124K job descriptions with `all-MiniLM-L6-v2` takes ~30-60 min on CPU. Use `--device cuda` if a GPU is available, or subsample by editing `build_job_semantic_index()` in `engine/semantic.py`.
+For full setup, pipeline steps, and deployment instructions see **[STEPS.md](STEPS.md)**.
 
 ---
 
 ## Retrieval Modes
 
-**BM25F (lexical)** — Field-weighted BM25 with separate inverted index channels for title (weight=3.0, b=0.3) and description (weight=1.0, b=0.75). Handles keyword matching with IDF weighting and per-field length normalization.
+**BM25F (lexical)** — Field-weighted BM25 with separate channels for title (weight=3.0, b=0.3) and description (weight=1.0, b=0.75). Handles exact keyword matching with per-field length normalization.
 
-**Semantic** — Sentence-transformer embeddings (`all-MiniLM-L6-v2`, 384-dim). Encodes documents and queries into dense vectors; retrieval by cosine similarity. Handles vocabulary mismatch (e.g. "ML" vs "machine learning").
+**Semantic** — `all-MiniLM-L6-v2` sentence-transformer embeddings (384-dim). Retrieval by cosine similarity over normalized dense vectors. Handles vocabulary mismatch (e.g. "ML" ↔ "machine learning", "Postgres" ↔ "PostgreSQL").
 
-**Hybrid** — Min-max normalized weighted sum: `score = alpha * BM25F + (1 - alpha) * semantic`. Default alpha=0.5, tunable at runtime.
+**Hybrid** — Min-max normalized weighted sum: `score = α·BM25F + (1-α)·semantic`. Default α=0.5.
 
 ---
 
-## Evaluation
+## Evaluation Results
 
-Ground truth is generated two ways:
+Evaluated on 48 query resumes across 24 categories. Ground truth pooled from BM25F and semantic candidates with category-based relevance grades (3 = same category, 1 = related, 0 = different).
 
-- **Category-based (free, instant):** Resume categories (24 from snehaanbhawal) are mapped to job categories via a hand-built mapping. A retrieved job is graded 3 (same category), 1 (related), or 0 (unrelated).
-- **LLM-scored:** Resume-job pairs sent to an LLM with a 0-3 graded relevance prompt.
+| Metric   | BM25F | Semantic   | Hybrid |
+|----------|-------|------------|--------|
+| P@5      | 0.296 | **0.421**  | 0.367  |
+| P@10     | 0.288 | **0.442**  | 0.358  |
+| NDCG@10  | 0.313 | **0.458**  | 0.369  |
+| NDCG@20  | 0.358 | **0.487**  | 0.429  |
+| MAP      | 0.185 | **0.321**  | 0.225  |
+
+Semantic outperforms BM25F by ~15 NDCG points, consistent with vocabulary mismatch being the dominant challenge in resume-job matching. Hybrid at α=0.5 is between the two; alpha tuning toward lower values (more semantic weight) is a known improvement path.
+
+---
+
+## Ground Truth Generation
 
 ```bash
-# Category-based (no API key needed)
+# Category-based (free, instant — no API key)
 python evaluation/generate_ground_truth.py --api category --num-queries 100
 
-# LLM-scored
-python evaluation/generate_ground_truth.py --api anthropic --num-queries 50 --top-k 20
+# GPT-scored (requires OPENAI_API_KEY in .env)
+# ~50 queries × 20 candidates costs ~$0.01-0.02
+python evaluation/generate_ground_truth.py --api openai --num-queries 50 --top-k 20
 ```
-
-Metrics computed: Precision@K, NDCG@K, MAP — compared across BM25F, semantic, and hybrid modes.
 
 ---
 
 ## Project Structure
 
 ```
-JobMatch/
-├── build.py                        # Master pipeline (preprocess/index/evaluate/demo)
+jobmatch/
+├── build.py                        # Master pipeline: preprocess / index / evaluate / demo
+├── Dockerfile                      # Container image for deployment
+├── fly.toml                        # Fly.io deployment config
+├── Procfile                        # gunicorn entry point (Railway, Render, etc.)
 ├── requirements.txt
+├── STEPS.md                        # Full step-by-step reference
+├── .env.example                    # Copy to .env — add OPENAI_API_KEY for GPT scoring
 │
 ├── engine/
 │   ├── bm25f.py                    # BM25F inverted index with multi-field weighting
 │   ├── semantic.py                 # Sentence-transformer embedding retrieval
-│   └── hybrid.py                   # Hybrid fusion (BM25F + semantic)
+│   └── hybrid.py                   # Hybrid fusion (BM25F + semantic, min-max normalized)
 │
 ├── evaluation/
-│   ├── evaluate.py                 # P@K, NDCG@K, MAP metrics + comparison table
-│   └── generate_ground_truth.py    # Category-based and LLM-scored relevance judgments
+│   ├── evaluate.py                 # P@K, NDCG@K, MAP + comparison table
+│   └── generate_ground_truth.py    # Category-based and GPT-scored relevance judgments
 │
 ├── scripts/
-│   ├── preprocess.py               # HTML stripping, deduplication, category extraction
+│   ├── preprocess.py               # HTML stripping, dedup, category normalization
 │   ├── generate_figures.py         # EDA figures for checkpoints
-│   └── benchmark_encoding.py       # Semantic encoding speed benchmark
+│   └── build_sample_indexes.py     # Stratified subsample + index build for deployment
 │
 ├── data/
-│   ├── raw/                        # NOT in git — download from sources above
-│   ├── processed/                  # Generated by preprocess.py
-│   └── indexes/                    # Generated by build.py --step index
+│   ├── raw/                        # NOT in git — download from Kaggle/GitHub
+│   ├── processed/                  # NOT in git — generated by preprocess.py
+│   └── indexes/                    # IN git — pre-built indexes committed for deployment
 │
-├── docs/
-│   ├── project-requirements (1).pdf
-│   ├── Proposal JobMatch.pdf
-│   └── CSCE 470 Project Checkpoint - Data.pdf
-│
-└── app/                            # Web app (Checkpoint 3+)
+└── app/
+    ├── server.py                   # Flask app — lazy-loads indexes, serves retrieval results
+    └── templates/                  # Jinja2 + Tailwind CSS (base, index, results, partials)
 ```
+
+---
+
+## Datasets
+
+| Dataset | Source | Records | Use |
+|---------|--------|---------|-----|
+| arshkon LinkedIn job postings | [Kaggle](https://www.kaggle.com/datasets/arshkon/linkedin-job-postings) | 123,849 | Primary job corpus (full descriptions) |
+| asaniczka 1.3M jobs | [Kaggle](https://www.kaggle.com/datasets/asaniczka/1-3m-linkedin-jobs-and-skills-2024) | 1,348,454 | Supplementary (skills, metadata) |
+| snehaanbhawal resumes | [Kaggle](https://www.kaggle.com/datasets/snehaanbhawal/resume-dataset) | 2,484 | Resume corpus (24 category labels) |
+| florex resume corpus | [GitHub](https://github.com/florex/resume_corpus) | 29,783 | Supplementary resume corpus |
+
+---
+
+## References
+
+- Robertson & Zaragoza, "The Probabilistic Relevance Framework: BM25 and Beyond"
+- Borisyuk et al., "Semantic Search at LinkedIn," arXiv:2602.07309
+- Jiechieu & Tsopze, "Skills prediction based on multi-label resume classification using CNN," Neural Comput & Applic (2020)

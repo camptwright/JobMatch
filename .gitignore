@@ -1,14 +1,16 @@
 # ═══════════════════════════════════════════════════════════════
 # JobMatch .gitignore
 # ═══════════════════════════════════════════════════════════════
- 
+
 # ── Raw datasets (too large for GitHub) ───────────────────────
 data/raw/
- 
+
 # ── Processed/generated data ──────────────────────────────────
+# data/processed/ is ignored (only needed to build indexes, not at runtime)
 data/processed/
-data/indexes/
- 
+# data/indexes/ is intentionally NOT ignored — pre-built indexes are committed
+# so the deployed app has something to load without rebuilding from raw data.
+
 # ── Python ────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
@@ -21,36 +23,43 @@ build/
 venv/
 env/
 .venv/
- 
+
 # ── OS files ──────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
- 
+
 # ── IDE ───────────────────────────────────────────────────────
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
- 
+
 # ── Jupyter ───────────────────────────────────────────────────
 .ipynb_checkpoints/
- 
+
+# ── Secrets ───────────────────────────────────────────────────
+.env
+
 # ── Misc ──────────────────────────────────────────────────────
 *.zip
 *.tar.gz
 
-# ── AI/Claude files ───────────────────────────────────────────
-.claude/
-CLAUDE.md
-
 # ── Generated outputs ─────────────────────────────────────────
 eval_output.txt
 output.txt
+build_output.txt
+evaluation/ground_truth.csv
 
-# ── Docs (only keep checkpoint deliverables) ──────────────────
+# ── Markdown (local reference only — README is the exception) ─
+*.md
+!README.md
+
+# ── Docs (only keep project deliverables) ─────────────────────
 docs/*
 !docs/CSCE 470 Project Checkpoint - Data.pdf
+!docs/CSCE 470 Project Checkpoint - UI (1).pdf
 !docs/Proposal JobMatch.pdf
 !docs/project-requirements (1).pdf

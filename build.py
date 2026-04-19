@@ -68,13 +68,15 @@ def step_evaluate():
 	gt_path = os.path.join(BASE_DIR, 'evaluation', 'ground_truth.csv')
 	idx_path = os.path.join(INDEX_DIR, 'jobs_bm25f.pkl')
 	if not os.path.exists(gt_path):
-		print('Generating pooled BM25F ground truth...')
+		print('Generating pooled ground truth (BM25F + semantic)...')
 		from evaluation.generate_ground_truth import generate_pooled_ground_truth
+		sem_dir = os.path.join(INDEX_DIR, 'jobs_semantic')
 		generate_pooled_ground_truth(
 			os.path.join(PROC_DIR, 'resumes_clean.csv'),
 			os.path.join(PROC_DIR, 'jobs_clean.csv'),
 			gt_path,
 			bm25f_index_path=idx_path,
+			semantic_index_dir=sem_dir if os.path.isdir(sem_dir) else None,
 			num_queries=50,
 			top_k=20,
 			n_random_negatives=5,
