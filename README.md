@@ -74,7 +74,6 @@ jobmatch/
 ├── fly.toml                        # Fly.io deployment config
 ├── Procfile                        # gunicorn entry point (Railway, Render, etc.)
 ├── requirements.txt
-├── STEPS.md                        # Full step-by-step reference
 ├── .env.example                    # Copy to .env — add OPENAI_API_KEY for GPT scoring
 │
 ├── engine/
