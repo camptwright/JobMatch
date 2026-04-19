@@ -1,0 +1,15 @@
+[phases.install]
+cmds = [
+    # Install CPU-only PyTorch first. The default PyPI torch bundles CUDA
+    # libraries that are ~3 GB and useless on a CPU-only host.
+    "pip install torch --index-url https://download.pytorch.org/whl/cpu",
+    # Install remaining deps (pip sees torch already satisfied and skips it).
+    "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+    # Pre-download the sentence-transformer model (~90 MB) at build time so
+    # the first search request doesn't stall waiting on HuggingFace.
+    "python -c \"from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')\""
+]

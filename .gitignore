@@ -51,7 +51,6 @@ desktop.ini
 eval_output.txt
 output.txt
 build_output.txt
-evaluation/ground_truth.csv
 
 # ── Markdown (local reference only — README is the exception) ─
 *.md
