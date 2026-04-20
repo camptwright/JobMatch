@@ -28,6 +28,11 @@
             {{ job.category }}
           </span>
         {% endif %}
+        {% if job.cluster is not none and job.cluster is defined %}
+          <span class="inline-flex items-center rounded-full bg-slate-50 border border-slate-200 px-2 py-0.5 text-xs text-slate-500">
+            cluster {{ job.cluster }}
+          </span>
+        {% endif %}
       </div>
     </div>
 

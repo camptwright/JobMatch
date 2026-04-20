@@ -88,13 +88,24 @@ def build(n_jobs: int = 5000, seed: int = 42, device: str = None):
     job_bm25 = build_job_index(tmp_jobs, field_configs=field_configs)
     job_bm25.save(os.path.join(INDEX_DIR, "jobs_bm25f.pkl"))
 
+    job_sem = None
     try:
         from engine.semantic import build_job_semantic_index
         print("\n--- Building job semantic index ---")
         job_sem = build_job_semantic_index(tmp_jobs, device=device)
         job_sem.save(os.path.join(INDEX_DIR, "jobs_semantic"))
+
+        from engine.cluster import build_cluster_index
+        print("\n--- Building job cluster index (k=50) ---")
+        build_cluster_index(job_sem, n_clusters=50,
+                            save_path=os.path.join(INDEX_DIR, "jobs_clusters"))
     except ImportError:
-        print("\nWARNING: sentence-transformers not installed. Skipping semantic job index.")
+        print("\nWARNING: sentence-transformers not installed. Skipping semantic + cluster job indexes.")
+
+    from engine.lm import build_job_lm_index
+    print("\n--- Building job LM index ---")
+    job_lm = build_job_lm_index(tmp_jobs)
+    job_lm.save(os.path.join(INDEX_DIR, "jobs_lm.pkl"))
 
     os.remove(tmp_jobs)
 
@@ -103,13 +114,24 @@ def build(n_jobs: int = 5000, seed: int = 42, device: str = None):
     resume_bm25 = build_resume_index(resumes_csv)
     resume_bm25.save(os.path.join(INDEX_DIR, "resumes_bm25f.pkl"))
 
+    resume_sem = None
     try:
         from engine.semantic import build_resume_semantic_index
         print("\n--- Building resume semantic index ---")
         resume_sem = build_resume_semantic_index(resumes_csv, device=device)
         resume_sem.save(os.path.join(INDEX_DIR, "resumes_semantic"))
+
+        from engine.cluster import build_cluster_index
+        print("\n--- Building resume cluster index (k=50) ---")
+        build_cluster_index(resume_sem, n_clusters=50,
+                            save_path=os.path.join(INDEX_DIR, "resumes_clusters"))
     except ImportError:
-        print("\nWARNING: sentence-transformers not installed. Skipping semantic resume index.")
+        print("\nWARNING: sentence-transformers not installed. Skipping semantic + cluster resume indexes.")
+
+    from engine.lm import build_resume_lm_index
+    print("\n--- Building resume LM index ---")
+    resume_lm = build_resume_lm_index(resumes_csv)
+    resume_lm.save(os.path.join(INDEX_DIR, "resumes_lm.pkl"))
 
     # ── Summary ─────────────────────────────────────────────────────────────
     print("\n" + "=" * 55)
@@ -124,9 +146,6 @@ def build(n_jobs: int = 5000, seed: int = 42, device: str = None):
             print(f"  {rel:<45} {mb:6.1f} MB")
     print(f"  {'Total':<45} {total_mb:6.1f} MB")
     print("=" * 55)
-    print("\nNext step — commit the indexes:")
-    print("  git add data/indexes/")
-    print("  git commit -m 'add sample indexes for deployment'")
 
 
 if __name__ == "__main__":

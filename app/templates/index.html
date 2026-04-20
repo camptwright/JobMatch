@@ -6,7 +6,7 @@
   <div class="mb-6">
     <h1 class="text-2xl font-semibold">Match jobs and resumes</h1>
     <p class="mt-2 text-slate-600">
-      Paste text or upload a PDF. Ranked by hybrid BM25F + semantic relevance.
+      Paste text or upload a PDF. Choose a retrieval mode — Hybrid is recommended.
     </p>
   </div>
 
@@ -44,6 +44,22 @@
             class="mt-1 block w-full text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
           />
         </label>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="block flex-1 min-w-[140px]">
+            <div class="text-sm font-medium mb-1">Retrieval mode</div>
+            <select name="mode" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400">
+              <option value="hybrid" selected>Hybrid (recommended)</option>
+              <option value="semantic">Semantic</option>
+              <option value="bm25f">BM25F</option>
+              <option value="lm">Language Model</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-2 text-sm pt-5 cursor-pointer">
+            <input type="checkbox" name="use_prf" value="1" class="rounded border-slate-300">
+            <span>Query expansion (PRF)</span>
+          </label>
+        </div>
 
         <button
           type="submit"
@@ -93,6 +109,22 @@
             class="mt-1 block w-full text-sm text-slate-700 file:mr-4 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-slate-800"
           />
         </label>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="block flex-1 min-w-[140px]">
+            <div class="text-sm font-medium mb-1">Retrieval mode</div>
+            <select name="mode" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400">
+              <option value="hybrid" selected>Hybrid (recommended)</option>
+              <option value="semantic">Semantic</option>
+              <option value="bm25f">BM25F</option>
+              <option value="lm">Language Model</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-2 text-sm pt-5 cursor-pointer">
+            <input type="checkbox" name="use_prf" value="1" class="rounded border-slate-300">
+            <span>Query expansion (PRF)</span>
+          </label>
+        </div>
 
         <button
           type="submit"

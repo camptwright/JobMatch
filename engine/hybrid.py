@@ -1,13 +1,18 @@
+import numpy as np
+
 from engine.bm25f import BM25FIndex
 from engine.semantic import SemanticIndex
 
 
 class HybridRetriever:
-	def __init__(self, bm25f_index, semantic_index, alpha=0.5, candidate_pool=100):
+	def __init__(self, bm25f_index, semantic_index, alpha=0.5, candidate_pool=100,
+				 cluster_index=None, lm_index=None):
 		self.bm25f = bm25f_index
 		self.semantic = semantic_index
 		self.alpha = alpha
 		self.candidate_pool = candidate_pool
+		self.cluster_index = cluster_index
+		self.lm_index = lm_index
 
 	def search(self, query, top_k=10, alpha=None, mode='hybrid', return_metadata=True):
 		a = alpha if alpha is not None else self.alpha
@@ -17,6 +22,14 @@ class HybridRetriever:
 			if not return_metadata:
 				return results
 			return [(doc_id, score, self.bm25f.get_doc(doc_id)) for doc_id, score in results]
+
+		if mode == 'lm':
+			if self.lm_index is None:
+				raise ValueError('No LanguageModelIndex attached. Pass lm_index= to HybridRetriever.')
+			results = self.lm_index.search(query, top_k=top_k)
+			if not return_metadata:
+				return results
+			return [(doc_id, score, self.lm_index.get_doc(doc_id)) for doc_id, score in results]
 
 		if mode == 'semantic':
 			results = self.semantic.search(query, top_k=top_k)
@@ -62,16 +75,82 @@ class HybridRetriever:
 			meta = dict(meta)
 			meta['bm25f_score'] = bm25_scores.get(doc_id, 0.0)
 			meta['semantic_score'] = sem_scores.get(doc_id, 0.0)
+			if self.cluster_index is not None:
+				meta['cluster'] = self.cluster_index.get_cluster(doc_id)
 			results.append((doc_id, score, meta))
 
 		return results
 
+	def search_with_prf(self, query, top_k=10, prf_k=5, prf_alpha=0.7, alpha=None, mode='hybrid'):
+		if self.semantic.embeddings is None:
+			return self.search(query, top_k=top_k, alpha=alpha, mode=mode)
+
+		self.semantic._load_model()
+		q_emb = self.semantic.model.encode([query], normalize_embeddings=True)[0]
+
+		sem_pool = self.semantic.search(query, top_k=prf_k)
+		if sem_pool:
+			feedback_ids = [doc_id for doc_id, _ in sem_pool]
+			feedback_embs = np.array([
+				self.semantic.embeddings[self.semantic.doc_ids.index(did)]
+				for did in feedback_ids
+				if did in self.semantic.doc_ids
+			])
+			if len(feedback_embs):
+				centroid = feedback_embs.mean(axis=0)
+				centroid /= (np.linalg.norm(centroid) + 1e-9)
+				q_emb = prf_alpha * q_emb + (1.0 - prf_alpha) * centroid
+				q_emb /= (np.linalg.norm(q_emb) + 1e-9)
+
+		scores = self.semantic.embeddings @ q_emb
+		top_indices = np.argsort(scores)[::-1][:self.candidate_pool]
+		sem_results = [(self.semantic.doc_ids[i], float(scores[i])) for i in top_indices]
+
+		bm25_results = self.bm25f.search(query, top_k=self.candidate_pool)
+
+		all_candidates = set()
+		bm25_scores, sem_scores = {}, {}
+		for doc_id, score in bm25_results:
+			all_candidates.add(doc_id)
+			bm25_scores[doc_id] = score
+		for doc_id, score in sem_results:
+			all_candidates.add(doc_id)
+			sem_scores[doc_id] = score
+
+		a = alpha if alpha is not None else self.alpha
+		bm25_norm = _min_max_normalize(bm25_scores)
+		sem_norm = _min_max_normalize(sem_scores)
+
+		combined = sorted(
+			[(did, a * bm25_norm.get(did, 0.0) + (1.0 - a) * sem_norm.get(did, 0.0))
+			 for did in all_candidates],
+			key=lambda x: x[1], reverse=True,
+		)
+
+		results = []
+		for doc_id, score in combined[:top_k]:
+			meta = self.bm25f.get_doc(doc_id) or self.semantic.get_doc(doc_id)
+			meta = dict(meta)
+			meta['bm25f_score'] = bm25_scores.get(doc_id, 0.0)
+			meta['semantic_score'] = sem_scores.get(doc_id, 0.0)
+			results.append((doc_id, score, meta))
+		return results
+
+	def cluster_distribution(self, results):
+		if self.cluster_index is None:
+			return {}
+		doc_ids = [doc_id for doc_id, *_ in results]
+		return self.cluster_index.cluster_counts(doc_ids)
+
 	def compare_modes(self, query, top_k=5):
-		return {
+		modes = {
 			'bm25f':    self.search(query, top_k=top_k, mode='bm25f'),
 			'semantic': self.search(query, top_k=top_k, mode='semantic'),
 			'hybrid':   self.search(query, top_k=top_k, mode='hybrid'),
 		}
+		if self.lm_index is not None:
+			modes['lm'] = self.search(query, top_k=top_k, mode='lm')
+		return modes
 
 
 def _min_max_normalize(scores):

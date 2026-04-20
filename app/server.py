@@ -48,19 +48,61 @@ def _load_retrievers():
     job_bm25    = BM25FIndex.load(bm25_jobs_path)
     resume_bm25 = BM25FIndex.load(bm25_resumes_path)
 
+    # Optional: language model indexes
+    job_lm = resume_lm = None
+    lm_jobs_path    = os.path.join(_INDEX_DIR, "jobs_lm.pkl")
+    lm_resumes_path = os.path.join(_INDEX_DIR, "resumes_lm.pkl")
+    if os.path.exists(lm_jobs_path) and os.path.exists(lm_resumes_path):
+        try:
+            from engine.lm import LanguageModelIndex
+            job_lm    = LanguageModelIndex.load(lm_jobs_path)
+            resume_lm = LanguageModelIndex.load(lm_resumes_path)
+        except Exception as e:
+            print(f"[jobmatch] LM index unavailable: {e}", file=sys.stderr)
+
+    # Optional: cluster indexes
+    job_clusters = resume_clusters = None
+    jobs_cluster_path    = os.path.join(_INDEX_DIR, "jobs_clusters.npz")
+    resumes_cluster_path = os.path.join(_INDEX_DIR, "resumes_clusters.npz")
+    if os.path.exists(jobs_cluster_path) and os.path.exists(resumes_cluster_path):
+        try:
+            from engine.cluster import ClusterIndex
+            job_clusters    = ClusterIndex.load(jobs_cluster_path)
+            resume_clusters = ClusterIndex.load(resumes_cluster_path)
+        except Exception as e:
+            print(f"[jobmatch] Cluster index unavailable: {e}", file=sys.stderr)
+
+    # Optional: LTR reranker
+    ltr_model = None
+    ltr_path = os.path.join(_INDEX_DIR, "ltr_model.pkl")
+    if os.path.exists(ltr_path):
+        try:
+            from engine.ltr import LTRReranker
+            ltr_model = LTRReranker.load(ltr_path)
+        except Exception as e:
+            print(f"[jobmatch] LTR model unavailable: {e}", file=sys.stderr)
+
     try:
         from engine.semantic import SemanticIndex
         from engine.hybrid import HybridRetriever
         job_sem    = SemanticIndex.load(os.path.join(_INDEX_DIR, "jobs_semantic"))
         resume_sem = SemanticIndex.load(os.path.join(_INDEX_DIR, "resumes_semantic"))
-        _job_retriever    = HybridRetriever(job_bm25, job_sem)
-        _resume_retriever = HybridRetriever(resume_bm25, resume_sem)
+        _job_retriever    = HybridRetriever(job_bm25, job_sem,
+                                            cluster_index=job_clusters,
+                                            lm_index=job_lm)
+        _resume_retriever = HybridRetriever(resume_bm25, resume_sem,
+                                            cluster_index=resume_clusters,
+                                            lm_index=resume_lm)
         _semantic_available = True
     except Exception as e:
         print(f"[jobmatch] Semantic index unavailable, falling back to BM25F: {e}",
               file=sys.stderr)
         _job_retriever    = job_bm25
         _resume_retriever = resume_bm25
+
+    # Attach LTR to retrievers if available
+    if ltr_model is not None and _semantic_available:
+        _job_retriever._ltr = ltr_model
 
     _retrievers_loaded = True
 
@@ -74,10 +116,18 @@ def _linkedin_search_url(title: str, company: str = "") -> str:
     return "https://www.linkedin.com/jobs/search/?" + urllib.parse.urlencode({"keywords": query})
 
 
-def _search_jobs(query: str, top_k: int = 10) -> list:
+def _search_jobs(query: str, top_k: int = 10, mode: str = "hybrid", use_prf: bool = False,
+                 use_ltr: bool = False) -> list:
     _load_retrievers()
     if _semantic_available:
-        raw = _job_retriever.search(query, top_k=top_k, mode="hybrid")
+        if use_prf:
+            raw = _job_retriever.search_with_prf(query, top_k=top_k)
+        else:
+            raw = _job_retriever.search(query, top_k=top_k, mode=mode)
+
+        if use_ltr and getattr(_job_retriever, "_ltr", None) is not None:
+            raw = _job_retriever._ltr.rerank(query, raw)
+
         results = []
         for _, score, m in raw:
             title   = m.get("title", "")
@@ -88,6 +138,7 @@ def _search_jobs(query: str, top_k: int = 10) -> list:
                 "location": m.get("location", ""),
                 "category": m.get("category", ""),
                 "score":    round(score, 4),
+                "cluster":  m.get("cluster"),
                 "url":      _linkedin_search_url(title, company),
             })
         return results
@@ -102,17 +153,39 @@ def _search_jobs(query: str, top_k: int = 10) -> list:
     return results
 
 
-def _search_resumes(query: str, top_k: int = 10) -> list:
+def _search_resumes(query: str, top_k: int = 10, mode: str = "hybrid",
+                    use_prf: bool = False) -> list:
     _load_retrievers()
     if _semantic_available:
-        raw = _resume_retriever.search(query, top_k=top_k, mode="hybrid")
+        if use_prf:
+            raw = _resume_retriever.search_with_prf(query, top_k=top_k)
+        else:
+            raw = _resume_retriever.search(query, top_k=top_k, mode=mode)
         return [
-            {"category": m.get("category", ""), "text": m.get("text", ""), "score": round(score, 4)}
+            {"category": m.get("category", ""), "text": m.get("text", ""),
+             "score": round(score, 4), "cluster": m.get("cluster")}
             for _, score, m in raw
         ]
 
     raw = _resume_retriever.search(query, top_k=top_k)
     return [{**_resume_retriever.get_doc(doc_id), "score": round(score, 4)} for doc_id, score in raw]
+
+
+def _cluster_counts(results: list) -> dict:
+    counts = {}
+    for r in results:
+        c = r.get("cluster")
+        if c is not None:
+            counts[c] = counts.get(c, 0) + 1
+    return counts
+
+
+def _cluster_dist_jobs(results: list) -> dict:
+    return _cluster_counts(results)
+
+
+def _cluster_dist_resumes(results: list) -> dict:
+    return _cluster_counts(results)
 
 
 def _get_query_text() -> str:
@@ -186,10 +259,15 @@ def _run_evaluation():
     def _hybrid_fn(q):
         return _job_retriever.search(q, top_k=50, mode="hybrid", return_metadata=False)
 
+    def _lm_fn(q):
+        return _job_retriever.lm_index.search(q, top_k=50)
+
     modes = {"BM25F": _bm25f_fn}
     if _semantic_available:
         modes["Semantic"] = _semantic_fn
         modes["Hybrid"]   = _hybrid_fn
+    if _semantic_available and getattr(_job_retriever, "lm_index", None) is not None:
+        modes["LM"] = _lm_fn
 
     out_modes = {}
     for name, fn in modes.items():
@@ -232,13 +310,21 @@ def create_app() -> Flask:
         if _load_error:
             return render_template("error.html", message=_load_error), 503
 
-        query = _get_query_text()
+        query   = _get_query_text()
+        mode    = request.form.get("mode", "hybrid")
+        use_prf = bool(request.form.get("use_prf"))
+
         if not query:
             return render_template("results.html", title="Jobs matched to resume",
-                                   results=[], result_type="jobs")
+                                   results=[], result_type="jobs",
+                                   mode_used=mode, prf_used=False, cluster_dist={})
 
+        results = _search_jobs(query, mode=mode, use_prf=use_prf)
+        cluster_dist = _cluster_dist_jobs(results)
         return render_template("results.html", title="Jobs matched to resume",
-                               results=_search_jobs(query), result_type="jobs")
+                               results=results, result_type="jobs",
+                               mode_used=mode, prf_used=use_prf,
+                               cluster_dist=cluster_dist)
 
     # ── Match: job → resumes ─────────────────────────────────────────────────
     @app.post("/match/resumes")
@@ -247,13 +333,21 @@ def create_app() -> Flask:
         if _load_error:
             return render_template("error.html", message=_load_error), 503
 
-        query = _get_query_text()
+        query   = _get_query_text()
+        mode    = request.form.get("mode", "hybrid")
+        use_prf = bool(request.form.get("use_prf"))
+
         if not query:
             return render_template("results.html", title="Resumes matched to job",
-                                   results=[], result_type="resumes")
+                                   results=[], result_type="resumes",
+                                   mode_used=mode, prf_used=False, cluster_dist={})
 
+        results = _search_resumes(query, mode=mode, use_prf=use_prf)
+        cluster_dist = _cluster_dist_resumes(results)
         return render_template("results.html", title="Resumes matched to job",
-                               results=_search_resumes(query), result_type="resumes")
+                               results=results, result_type="resumes",
+                               mode_used=mode, prf_used=use_prf,
+                               cluster_dist=cluster_dist)
 
     # ── Evaluate: page ───────────────────────────────────────────────────────
     @app.get("/evaluate")

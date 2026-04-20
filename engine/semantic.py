@@ -45,6 +45,17 @@ class SemanticIndex:
 			normalize_embeddings=True,
 		)
 		print('  Embeddings shape: {}'.format(self.embeddings.shape))
+		self._build_faiss_index()
+
+	def _build_faiss_index(self):
+		try:
+			import faiss
+			dim = self.embeddings.shape[1]
+			idx = faiss.IndexFlatIP(dim)
+			idx.add(self.embeddings.astype(np.float32))
+			self._faiss_index = idx
+		except ImportError:
+			self._faiss_index = None
 
 	def search(self, query, top_k=10):
 		self._load_model()
@@ -54,11 +65,20 @@ class SemanticIndex:
 
 		q_emb = self.model.encode([query], normalize_embeddings=True)[0]
 
-		scores = self.embeddings @ q_emb
+		if getattr(self, '_faiss_index', None) is not None:
+			scores_arr, indices = self._faiss_index.search(
+				q_emb.astype(np.float32).reshape(1, -1), top_k
+			)
+			results = [
+				(self.doc_ids[i], float(scores_arr[0][rank]))
+				for rank, i in enumerate(indices[0])
+				if i >= 0
+			]
+			return results
 
+		scores = self.embeddings @ q_emb
 		top_indices = np.argsort(scores)[::-1][:top_k]
-		results = [(self.doc_ids[i], float(scores[i])) for i in top_indices]
-		return results
+		return [(self.doc_ids[i], float(scores[i])) for i in top_indices]
 
 	def get_doc(self, doc_id):
 		return self.doc_store.get(doc_id, {})
@@ -84,6 +104,7 @@ class SemanticIndex:
 		idx.doc_ids = meta['doc_ids']
 		idx.doc_store = {int(k): v for k, v in meta['doc_store'].items()}
 		idx.embeddings = np.load(os.path.join(directory, 'embeddings.npy'))
+		idx._build_faiss_index()
 		return idx
 
 

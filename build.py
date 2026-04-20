@@ -18,6 +18,60 @@ def step_preprocess():
 	preprocess_main()
 
 
+def step_ltr():
+	print('\n' + '='*60)
+	print('  STEP: Train LTR Reranker')
+	print('='*60)
+
+	gt_path = os.path.join(BASE_DIR, 'evaluation', 'ground_truth.csv')
+	bm25f_path = os.path.join(INDEX_DIR, 'jobs_bm25f.pkl')
+	ltr_path = os.path.join(INDEX_DIR, 'ltr_model.pkl')
+
+	if not os.path.exists(gt_path):
+		print('ERROR: ground_truth.csv not found. Run --step evaluate first.')
+		return
+	if not os.path.exists(bm25f_path):
+		print('ERROR: BM25F index not found. Run --step index first.')
+		return
+
+	from engine.bm25f import BM25FIndex
+	from engine.ltr import LTRReranker
+
+	bm25f_idx = BM25FIndex.load(bm25f_path)
+
+	sem_dir = os.path.join(INDEX_DIR, 'jobs_semantic')
+	try:
+		from engine.semantic import SemanticIndex
+		from engine.hybrid import HybridRetriever
+		sem_idx = SemanticIndex.load(sem_dir) if os.path.isdir(sem_dir) else None
+	except Exception:
+		sem_idx = None
+
+	retriever = HybridRetriever(bm25f_idx, sem_idx) if sem_idx else None
+
+	if retriever is None:
+		print('WARNING: Semantic index not available. LTR will use only BM25F/LM features.')
+
+	import pandas as pd
+	resumes_df = pd.read_csv(os.path.join(PROC_DIR, 'resumes_clean.csv'))
+	id_col = 'ID' if 'ID' in resumes_df.columns else None
+	text_col = 'resume_clean' if 'resume_clean' in resumes_df.columns else 'Resume_str'
+	queries = dict(zip(
+		resumes_df[id_col].astype(int) if id_col else range(len(resumes_df)),
+		resumes_df[text_col].fillna('').astype(str),
+	))
+
+	# Use a minimal retriever wrapper if sem_idx not available
+	class _MinimalRetriever:
+		def __init__(self, bm25f):
+			self.bm25f = bm25f
+
+	ltr = LTRReranker()
+	ltr.train(gt_path, retriever if retriever else _MinimalRetriever(bm25f_idx), queries_dict=queries)
+	ltr.save(ltr_path)
+	print('\nLTR model saved to', ltr_path)
+
+
 def step_index(device=None):
 	print('\n' + '='*60)
 	print('  STEP 2: Building Indexes')
@@ -42,6 +96,7 @@ def step_index(device=None):
 	resume_idx = build_resume_index(resumes_csv)
 	resume_idx.save(os.path.join(INDEX_DIR, 'resumes_bm25f.pkl'))
 
+	job_sem = None
 	try:
 		from engine.semantic import build_job_semantic_index, build_resume_semantic_index
 
@@ -53,9 +108,34 @@ def step_index(device=None):
 		resume_sem = build_resume_semantic_index(resumes_csv, device=device)
 		resume_sem.save(os.path.join(INDEX_DIR, 'resumes_semantic'))
 
+		print('\n--- Job Cluster Index (k-means, n=50) ---')
+		from engine.cluster import build_cluster_index
+		build_cluster_index(
+			job_sem,
+			n_clusters=50,
+			save_path=os.path.join(INDEX_DIR, 'jobs_clusters'),
+		)
+
+		print('\n--- Resume Cluster Index (k-means, n=50) ---')
+		build_cluster_index(
+			resume_sem,
+			n_clusters=50,
+			save_path=os.path.join(INDEX_DIR, 'resumes_clusters'),
+		)
+
 	except ImportError:
-		print('\nWARNING: sentence-transformers not installed. Skipping semantic index.')
+		print('\nWARNING: sentence-transformers not installed. Skipping semantic + cluster indexes.')
 		print('Install with: pip install sentence-transformers')
+
+	print('\n--- Job Posting Index (Language Model) ---')
+	from engine.lm import build_job_lm_index
+	job_lm = build_job_lm_index(jobs_csv)
+	job_lm.save(os.path.join(INDEX_DIR, 'jobs_lm.pkl'))
+
+	print('\n--- Resume Index (Language Model) ---')
+	from engine.lm import build_resume_lm_index
+	resume_lm = build_resume_lm_index(resumes_csv)
+	resume_lm.save(os.path.join(INDEX_DIR, 'resumes_lm.pkl'))
 
 	print('\nIndexing complete!')
 
@@ -208,7 +288,7 @@ def main():
 	parser = argparse.ArgumentParser(description='JobMatch Build Pipeline')
 	parser.add_argument(
 		'--step',
-		choices=['all', 'preprocess', 'index', 'evaluate', 'demo', 'rebuild', 'clean-all'],
+		choices=['all', 'preprocess', 'index', 'evaluate', 'ltr', 'demo', 'rebuild', 'clean-all'],
 		default='all',
 		help='Which pipeline step to run'
 	)
@@ -231,6 +311,8 @@ def main():
 			step_index(device=args.device)
 		if args.step in ('all', 'evaluate'):
 			step_evaluate()
+		if args.step in ('all', 'ltr'):
+			step_ltr()
 		if args.step == 'demo':
 			step_demo()
 
