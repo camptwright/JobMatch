@@ -65,7 +65,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 81310245,BUSINESS-DEVELOPMENT,3884429786,Sales,"Retail, Sales Associate",1
 81310245,BUSINESS-DEVELOPMENT,3898173175,Sales,Aftermarket Sales Representative,2
 81310245,BUSINESS-DEVELOPMENT,3904424842,Sales,Sales Design Consultant,1
-81310245,BUSINESS-DEVELOPMENT,3901650517,Sales,Traveling Sales Representative- Metals Industry,1
+81310245,BUSINESS-DEVELOPMENT,3901650517,Sales,Traveling Sales Representative- Metals Industry,2
 81310245,BUSINESS-DEVELOPMENT,3899529058,Sales,Cardiology Business Development Representative-Seattle,1
 81310245,BUSINESS-DEVELOPMENT,3906250686,Sales,Sr. Business Development Manager,2
 81310245,BUSINESS-DEVELOPMENT,3901954930,Sales,"Sr. Manager, Supply Sales",1
@@ -118,7 +118,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 11174187,ADVOCATE,3884440299,Other,Heavy Equipment Operator | Landfill | $3000 Bonus,0
 11174187,ADVOCATE,3887834728,Engineering,Manufacturing Process Engineer,0
 11174187,ADVOCATE,3902809893,Management,Assistant Store Director,0
-11174187,ADVOCATE,3905330159,Other,OR Support Clerk - Surgery - JSB Pavilion – 10 Hour Day Shift – Per Diem,0
+11174187,ADVOCATE,3905330159,Other,OR Support Clerk - Surgery - JSB Pavilion â€“ 10 Hour Day Shift â€“ Per Diem,0
 12858898,FINANCE,3900965348,Finance,Senior Property Accountant,1
 12858898,FINANCE,3905372255,Finance,Financial Analyst,1
 12858898,FINANCE,3902880432,Finance,"Property Accountant, Hybrid (80K-85K+Bonus)",1
@@ -150,7 +150,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 17570634,CONSTRUCTION,3898162485,Construction,ETL Architect,0
 17570634,CONSTRUCTION,3901946105,Construction,"Traveling Superintendent, Construction",2
 17570634,CONSTRUCTION,3895536118,Other,Deli Helper Clerk,0
-17570634,CONSTRUCTION,3900945115,Other,Contact Center Supervisor,1
+17570634,CONSTRUCTION,3900945115,Other,Contact Center Supervisor,0
 17570634,CONSTRUCTION,3900981542,Education,SPED Teacher - IEP & Assessment Specialist,0
 17570634,CONSTRUCTION,3902757077,Management,National Channel Business Manager - CDW (West),1
 17570634,CONSTRUCTION,3905240276,Sales,Salesperson,0
@@ -197,7 +197,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 35990852,DESIGNER,3905290182,Other,Facility Controls Technician ,0
 35990852,DESIGNER,3898160286,Other,EUC Information Systems Analyst,1
 35990852,DESIGNER,3905300691,Other,"Line Runner (3rd shift, 11pm-7:30am)",0
-35990852,DESIGNER,3903876763,Management,Product Manager (Underwriting & Delivery Modernization) – Remote,0
+35990852,DESIGNER,3903876763,Management,Product Manager (Underwriting & Delivery Modernization) â€“ Remote,0
 35990852,DESIGNER,3900081338,Other,Staff Chaplain Non-Exempt,0
 17108676,ENGINEERING,3902357371,Engineering,Paralegal/Legal Assistant - (Westlaw Software Experience Required),0
 17108676,ENGINEERING,3901354694,Engineering,Software Engineer,0
@@ -226,7 +226,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 24083609,INFORMATION-TECHNOLOGY,3906245970,Information-Technology,Sr IT Service Desk Specialist,1
 24083609,INFORMATION-TECHNOLOGY,3905326801,Information-Technology,Manager IT - Data Management (Remote),1
 24083609,INFORMATION-TECHNOLOGY,3905295637,Information-Technology,Credit Officer II Corporate Banking,0
-24083609,INFORMATION-TECHNOLOGY,3903870901,Information-Technology,Sr Manager – IT Business Partner and IT Process Leader (Sr IT Program Manager),1
+24083609,INFORMATION-TECHNOLOGY,3903870901,Information-Technology,Sr Manager â€“ IT Business Partner and IT Process Leader (Sr IT Program Manager),1
 24083609,INFORMATION-TECHNOLOGY,3902737564,Information-Technology,IT Analyst (CCW/CCWR),1
 24083609,INFORMATION-TECHNOLOGY,3899534548,Information-Technology,Product Manager - Debit Card Platform Enhancement,0
 24083609,INFORMATION-TECHNOLOGY,3899520374,Consulting,Search Consultant,0
@@ -305,7 +305,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 99806115,APPAREL,3901949529,Other,"Administrative Services Assistant, Senior",0
 99806115,APPAREL,3904578086,Other,Maintenance Technician,0
 99806115,APPAREL,3903842658,Other,Cook - Denton Village - Full Time,0
-99806115,APPAREL,3905332656,Other,"ED Tech (CNA), Night Shift, Emergency Department",1
+99806115,APPAREL,3905332656,Other,"ED Tech (CNA), Night Shift, Emergency Department",0
 99806115,APPAREL,3898167143,Other,Contracts Specialist,0
 99806115,APPAREL,3906221603,Other,Large Animal Attendant - 3rd Shift,0
 99806115,APPAREL,3901359122,Other,President/CEO,0
@@ -313,7 +313,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 99806115,APPAREL,3898163166,Finance,Financial Budget Analyst,0
 99806115,APPAREL,3895596136,Engineering,Front End Drupal Developer,0
 99806115,APPAREL,3902862154,Finance,Financial Analyst,0
-99806115,APPAREL,3904579422,Finance,Senior Accountant - West Omaha Headquarters - One of Nebraska’s Best Corporations - HEMPHILL EXCLUSIVE!,0
+99806115,APPAREL,3904579422,Finance,Senior Accountant - West Omaha Headquarters - One of Nebraskaâ€™s Best Corporations - HEMPHILL EXCLUSIVE!,0
 99806115,APPAREL,3902349789,Sales,Salesperson,1
 99806115,APPAREL,3894294713,HR,Entry Level Recruiter,1
 99806115,APPAREL,3888828120,Sales,Entry Level Sales Trainee (Cincinnati),1
@@ -353,7 +353,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 28290448,PUBLIC-RELATIONS,3905301822,Management,Regional Director of Revenue Management,0
 28290448,PUBLIC-RELATIONS,3902356322,Legal,Attorney,0
 28290448,PUBLIC-RELATIONS,3902860946,Other,Staff RN - ICU,0
-28290448,PUBLIC-RELATIONS,3904390328,Management,Director – {DB7440456},0
+28290448,PUBLIC-RELATIONS,3904390328,Management,Director â€“ {DB7440456},0
 28290448,PUBLIC-RELATIONS,3901391423,Other,H&H Field Support Analyst,0
 28290448,PUBLIC-RELATIONS,3901354844,Healthcare,PCU Registered Nurse,0
 28290448,PUBLIC-RELATIONS,3894995184,Other,Litigation Associate,0
@@ -396,7 +396,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 47410104,FINANCE,3904391650,Other,Part Time Sharps Collection Technician,0
 47410104,FINANCE,3905250181,Management,Dental Practice Manager,0
 47410104,FINANCE,3887874357,Other,Volunteer: Seeking online research to support Ukraine refugee assistance,0
-47410104,FINANCE,3885371917,Management,"Project Lead- Note: This is a hands-on, Field position requiring experience from the Deck and Waterfront.",0
+47410104,FINANCE,3885371917,Management,"Project Lead- Note:Â This is a hands-on, Field position requiring experience from the Deck and Waterfront.",0
 47410104,FINANCE,3901355322,Information-Technology,Network Administrator,0
 47410104,FINANCE,3906222605,Other,Aseptic Prep Operator II,0
 20026169,AVIATION,3884440410,Other,Reinsurance Placement Specialist,0
@@ -412,7 +412,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 20026169,AVIATION,3901667762,Healthcare,Medical Social Worker,0
 20026169,AVIATION,3905227053,Management,R&D Innovation Management Lead (1239),1
 20026169,AVIATION,3905375468,Healthcare,Physician - Hospitalist - Union Hospital Terre Haute,0
-20026169,AVIATION,3905339128,Management,Assistant Store Manager - Operations,0
+20026169,AVIATION,3905339128,Management,Assistant Store Manager - Operations,1
 20026169,AVIATION,3902830740,Finance,Staff Accountant,0
 20026169,AVIATION,3887887882,Engineering,Lead Information Security Engineer - Directory Security,0
 20026169,AVIATION,3902922384,Sales,Assistant Branch Manager - Sales Manager Trainee,1
@@ -422,7 +422,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 19402977,APPAREL,3903804912,Other,Directof of Logistics & Mission Resources,0
 19402977,APPAREL,3904991515,Other,Production Operator,0
 19402977,APPAREL,3902737961,Other,Change Management Analyst,0
-19402977,APPAREL,3901938654,Other,Logistics Specialist,1
+19402977,APPAREL,3901938654,Other,Logistics Specialist,0
 19402977,APPAREL,3904964701,Other,"Representative, Payment Posting",0
 19402977,APPAREL,3886477777,Other,Senior Banker - Bilingual Arabic Required,0
 19402977,APPAREL,3906231312,Other,Operations Supervisor,1
@@ -483,7 +483,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 28198029,SALES,3782812525,Sales,Salesperson,2
 28198029,SALES,3898165255,Sales,Sales Agent,1
 28198029,SALES,3902941884,Sales,BDR Intern (Digital Media),1
-28198029,SALES,3906094371,Sales,Vice President of Sales,1
+28198029,SALES,3906094371,Sales,Vice President of Sales,0
 28198029,SALES,3902352534,Sales,Personal Training Sales Manager,1
 28198029,SALES,3904416860,Sales,Counter Sales Representative,2
 28198029,SALES,3889129406,Sales,"Sales Manager, Boca Raton, FL",1
@@ -495,7 +495,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 28198029,SALES,3891074414,Engineering,"Sr Data engineer with AWS, PYTHON (W2)",0
 28198029,SALES,3901940039,Marketing,Marketing Communications Coordinator,1
 28198029,SALES,3903803988,Information-Technology,Commercial and Credit Intern,1
-28198029,SALES,3895491379,Other,Service Technician,0
+28198029,SALES,3895491379,Other,Service Technician,1
 28198029,SALES,3884435050,Other,Mtce Supv (Elev) II,0
 28198029,SALES,3904396233,Management,On-Premise Portfolio Manager - MNY,1
 28198029,SALES,3906251160,Other,Material Handler,0
@@ -507,7 +507,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 12955994,CONSULTANT,3901943437,Consulting,Senior Oracle Functional Consultant ( 326696),0
 12955994,CONSULTANT,3901939168,Consulting,Data Strategy / Privacy Consultant,1
 12955994,CONSULTANT,3902372045,Consulting,[Remote] Sage Intacct Implementation Consultant,1
-12955994,CONSULTANT,3903880525,Consulting,"Senior Consultant, Total Rewards",2
+12955994,CONSULTANT,3903880525,Consulting,"Senior Consultant, Total Rewards",1
 12955994,CONSULTANT,3903824635,Consulting,"Workday Reporting & Analytics Consultant, AMS",1
 12955994,CONSULTANT,3894213035,Other,People Ops Generalist,1
 12955994,CONSULTANT,3884249830,Other,MicroStrategy Administrator,0
@@ -563,7 +563,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 16877897,HR,3895566072,HR,Talent Sr Partner (manufacturing & supply chain),2
 16877897,HR,3901634353,HR,Entry Level Account Manager / Recruiter,1
 16877897,HR,3894278517,HR,Human Resources Information System Partner III,2
-16877897,HR,3903481015,HR,HR Business Partner – Global Functions,2
+16877897,HR,3903481015,HR,HR Business Partner â€“ Global Functions,2
 16877897,HR,3902758590,HR,HR Accommodations Delivery Partner,2
 16877897,HR,3900976436,HR,Human Resources Generalist,3
 16877897,HR,3901948172,HR,Human Resources Director,1
@@ -635,7 +635,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 26673507,BANKING,3902744773,Healthcare,Medical Science Liaison - GI,0
 26673507,BANKING,3903807475,Other,Activities Assistant,0
 26673507,BANKING,3905300342,Other,Surgical Technologist I (Sign-On Bonus ),0
-26673507,BANKING,3886476731,Marketing,"LN Concerts, Regional Marketing Coordinator – Southeast",0
+26673507,BANKING,3886476731,Marketing,"LN Concerts, Regional Marketing Coordinator â€“ Southeast",0
 26673507,BANKING,3901159886,Healthcare,Nurse Clinical/UKHC,0
 26673507,BANKING,3885108075,Healthcare,REGISTERED NURSE - SOUTHWOOD,0
 26673507,BANKING,3904920320,Sales,Outside Sales Specialist,1
@@ -650,7 +650,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 93988900,HEALTHCARE,3884896591,Healthcare,"Travel Nurse RN - Dialysis - $1,745 per week in Westlake, OH",0
 93988900,HEALTHCARE,3884989781,Healthcare,"Marriage & Family Therapist, Licensed/Outpatient Behavioral Health/Grossmont /PT .5/Days",0
 93988900,HEALTHCARE,3905857066,Other,Customer Care Specialist,0
-93988900,HEALTHCARE,3905343420,Management,Implementation Manager,1
+93988900,HEALTHCARE,3905343420,Management,Implementation Manager,0
 93988900,HEALTHCARE,3906233283,Design,Content Designer,0
 93988900,HEALTHCARE,3898170148,Data Science,Senior Data Analyst,0
 93988900,HEALTHCARE,3906232438,Other,Float Personal Banker 1 - Toledo SE Region,0
@@ -684,7 +684,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 10830646,ARTS,3898155797,Design,"Sr. Product Designer - Ads, Offers, & Promotions",0
 10830646,ARTS,3905274878,Design,Senior Product Designer,0
 10830646,ARTS,3906250629,Design,Senior UX Copywriter,0
-10830646,ARTS,3903882137,Design,Ingénieur senior en conception de circuits intégrés à signaux analogiques/mixtes - Acacia,0
+10830646,ARTS,3903882137,Design,IngÃ©nieur senior en conception de circuits intÃ©grÃ©s Ã  signaux analogiques/mixtes - Acacia,0
 10830646,ARTS,3899537673,Design,Junior Linux Admin (US Citizens only),0
 10830646,ARTS,3900078198,Design,Product Designer,0
 10830646,ARTS,3902362454,Design,Designer Tool & Die,0
@@ -731,7 +731,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 78357954,AUTOMOBILE,3902317975,Engineering,BI Data Engineer,0
 78357954,AUTOMOBILE,3902831604,Sales,Pharmaceutical Sales Representative,1
 78357954,AUTOMOBILE,3902831760,Other,baker/barista,0
-78357954,AUTOMOBILE,3884826488,Sales,Senior Sales Associate - Keyholder,1
+78357954,AUTOMOBILE,3884826488,Sales,Senior Sales Associate - Keyholder,2
 78357954,AUTOMOBILE,3903833635,Healthcare,Personal Injury Paralegal - Medical Experience,0
 78357954,AUTOMOBILE,3895597603,Other,Store Driver,0
 78357954,AUTOMOBILE,3887575790,Other,Detail Tech,0
@@ -789,7 +789,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 31677347,ENGINEERING,3905653149,Engineering,Test Technology Engineer,1
 31677347,ENGINEERING,3885814356,Engineering,Metrology Engineer,0
 31677347,ENGINEERING,3901346524,Engineering,Lead Java Developer,1
-31677347,ENGINEERING,3902947079,Other,"Senior Specialist, Corporate EHS – Environmental",0
+31677347,ENGINEERING,3902947079,Other,"Senior Specialist, Corporate EHS â€“ Environmental",0
 31677347,ENGINEERING,3895545239,Other,Administrative Assistant/Settlement Clerk,0
 31677347,ENGINEERING,3905871250,Information-Technology, Non-Profit Representative,0
 31677347,ENGINEERING,3884437499,Other,Driver | Commercial Front Load | CDL A or B,0
@@ -894,7 +894,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 16661264,AGRICULTURE,3888936279,Engineering,OPS Process Engineer,0
 16661264,AGRICULTURE,3899532923,Management,Sr. Procurement Manager,0
 16661264,AGRICULTURE,3901629457,Management,Sr Director M&A Integration,0
-16661264,AGRICULTURE,3905364843,Management,Wastewater Project Manager,0
+16661264,AGRICULTURE,3905364843,Management,Wastewater Project Manager,1
 16661264,AGRICULTURE,3884935872,Sales,Territory Manager Sales Intern,0
 16661264,AGRICULTURE,3889745457,Healthcare,REGISTERED NURSE - THE PAVILION HEALTH CENTER,0
 16661264,AGRICULTURE,3895597438,Finance,ACCOUNTING SPECIALIST,0
@@ -951,7 +951,7 @@ query_id,query_category,doc_id,doc_category,doc_title,relevance
 16103783,PUBLIC-RELATIONS,3904409253,Marketing,Social Media Marketing Intern,1
 16103783,PUBLIC-RELATIONS,3889441937,Engineering,Cloud Security Engineer III,0
 16103783,PUBLIC-RELATIONS,3904939721,Management,"Fundraising Manager, Walk to End Alzheimer's",1
-16103783,PUBLIC-RELATIONS,3901934445,Other,Marine Dispatcher,1
+16103783,PUBLIC-RELATIONS,3901934445,Other,Marine Dispatcher,0
 16103783,PUBLIC-RELATIONS,3888002446,Management,Pearle Vision - Issaquah WA- Assistant Manager,1
 16103783,PUBLIC-RELATIONS,3904060053,Other,Subway Sandwich Artist,0
 16103783,PUBLIC-RELATIONS,3904728221,Other,Physical Therapist,0

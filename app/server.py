@@ -9,7 +9,6 @@ if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 _INDEX_DIR = os.path.join(_ROOT, "data", "indexes")
-_GT_PATH   = os.path.join(_ROOT, "evaluation", "ground_truth.csv")
 
 from flask import Flask, render_template, request, jsonify
 
@@ -210,12 +209,88 @@ def _extract_pdf_text(pdf_file) -> str:
 # Evaluation
 # ---------------------------------------------------------------------------
 
+_RELATED_CATEGORY_PAIRS = {
+    frozenset({"Engineering", "Information-Technology"}),
+    frozenset({"Finance", "Consulting"}),
+    frozenset({"Sales", "Marketing"}),
+    frozenset({"Healthcare", "Education"}),
+    frozenset({"Design", "Marketing"}),
+}
+
+
+def _category_grade(resume_cat: str, job_cat: str) -> int:
+    if not job_cat or not resume_cat:
+        return 0
+    if job_cat == resume_cat:
+        return 3
+    if frozenset({job_cat, resume_cat}) in _RELATED_CATEGORY_PAIRS:
+        return 1
+    return 0
+
+
+def _inline_evaluate(retriever_fn, queries, job_categories, category_map, k_values):
+    """Evaluate retriever_fn using inline category-based relevance against loaded job index."""
+    import math
+
+    def _p_at_k(ranked, rel_set, k):
+        return sum(1 for d in ranked[:k] if d in rel_set) / k if k else 0.0
+
+    def _dcg(ranked, rel_map, k):
+        return sum(
+            (2 ** rel_map.get(d, 0) - 1) / math.log2(i + 2)
+            for i, d in enumerate(ranked[:k])
+        )
+
+    def _ndcg(ranked, rel_map, k):
+        ideal = sorted(rel_map.values(), reverse=True)
+        ideal_dcg = sum((2 ** r - 1) / math.log2(i + 2) for i, r in enumerate(ideal[:k]))
+        return _dcg(ranked, rel_map, k) / ideal_dcg if ideal_dcg else 0.0
+
+    def _ap(ranked, rel_set):
+        if not rel_set:
+            return 0.0
+        hits, ap = 0, 0.0
+        for i, d in enumerate(ranked):
+            if d in rel_set:
+                hits += 1
+                ap += hits / (i + 1)
+        return ap / len(rel_set)
+
+    per_query_ap = []
+    agg = {f"mean_P@{k}": 0.0 for k in k_values}
+    agg.update({f"mean_NDCG@{k}": 0.0 for k in k_values})
+    n = 0
+
+    for qid, query_text in queries.items():
+        resume_cat = category_map.get(qid, "")
+        results = retriever_fn(query_text)
+        ranked = [doc_id for doc_id, _ in results]
+
+        rel_map_q = {job_id: _category_grade(resume_cat, job_cat)
+                     for job_id, job_cat in job_categories.items()}
+        rel_set_q = {job_id for job_id, g in rel_map_q.items() if g >= 2}
+
+        for k in k_values:
+            agg[f"mean_P@{k}"] += _p_at_k(ranked, rel_set_q, k)
+            agg[f"mean_NDCG@{k}"] += _ndcg(ranked, rel_map_q, k)
+
+        per_query_ap.append(_ap(ranked, rel_set_q))
+        n += 1
+
+    if n:
+        for key in agg:
+            agg[key] /= n
+
+    agg["MAP"] = sum(per_query_ap) / len(per_query_ap) if per_query_ap else 0.0
+    agg["num_queries"] = n
+    return agg
+
+
 def _run_evaluation():
-    """Run three-way BM25F / Semantic / Hybrid evaluation against ground_truth.csv.
+    """Evaluate all retrieval modes inline against the loaded job index.
 
-    Query texts are pulled from the resume BM25F index metadata (stored there at
-    index-build time), so no processed CSVs are needed at runtime.
-
+    Ground truth is built on-the-fly from category matching so it is always
+    consistent with whatever job set is indexed (sample or full).
     Results are cached in _eval_cache after the first run.
     """
     global _eval_cache
@@ -226,38 +301,57 @@ def _run_evaluation():
     if _load_error:
         raise RuntimeError(_load_error)
 
-    if not os.path.exists(_GT_PATH):
-        raise RuntimeError(
-            "Ground truth file not found. "
-            "Run: python evaluation/generate_ground_truth.py --api category"
-        )
+    import random
+    import json
 
-    from evaluation.evaluate import load_ground_truth, evaluate_retrieval
-
-    rel_map, _ = load_ground_truth(_GT_PATH)
-
-    # Pull resume text from the BM25F resume index (stored as 'text' metadata).
     resume_idx = _resume_retriever.bm25f if _semantic_available else _resume_retriever
-    queries = {qid: resume_idx.get_doc(qid).get("text", "") for qid in rel_map}
-    queries = {qid: text for qid, text in queries.items() if text}
+    job_idx    = _job_retriever.bm25f    if _semantic_available else _job_retriever
+
+    # Load category map (resume_category → normalized category)
+    cat_map_path = os.path.join(_ROOT, "data", "processed", "category_map.json")
+    raw_cat_map = {}
+    if os.path.exists(cat_map_path):
+        with open(cat_map_path, encoding="utf-8") as f:
+            raw_cat_map = json.load(f)
+
+    # Build {qid: normalized_category} for all resumes
+    resume_cat_map = {}
+    all_resume_ids = list(resume_idx.doc_store.keys())
+    random.seed(42)
+    sampled_ids = random.sample(all_resume_ids, min(100, len(all_resume_ids)))
+    queries = {}
+    for qid in sampled_ids:
+        meta = resume_idx.get_doc(qid)
+        text = meta.get("text", "")
+        if not text:
+            continue
+        raw_cat = meta.get("category", "")
+        resume_cat_map[qid] = raw_cat_map.get(raw_cat, raw_cat)
+        queries[qid] = text
 
     if not queries:
         raise RuntimeError(
-            "No query texts found in resume index. "
+            "No resume texts found in resume index. "
             "Rebuild indexes: python build.py --step index"
         )
+
+    # Build {job_id: normalized_category} for all jobs in the loaded index
+    job_categories = {
+        doc_id: job_idx.get_doc(doc_id).get("category", "")
+        for doc_id in job_idx.doc_store
+    }
 
     k_values = [5, 10, 20]
 
     def _bm25f_fn(q):
-        idx = _job_retriever.bm25f if _semantic_available else _job_retriever
-        return idx.search(q, top_k=50)
+        return job_idx.search(q, top_k=50)
 
     def _semantic_fn(q):
         return _job_retriever.semantic.search(q, top_k=50)
 
     def _hybrid_fn(q):
-        return _job_retriever.search(q, top_k=50, mode="hybrid", return_metadata=False)
+        raw = _job_retriever.search(q, top_k=50, mode="hybrid")
+        return [(doc_id, score) for doc_id, score, _ in raw]
 
     def _lm_fn(q):
         return _job_retriever.lm_index.search(q, top_k=50)
@@ -271,8 +365,7 @@ def _run_evaluation():
 
     out_modes = {}
     for name, fn in modes.items():
-        res = evaluate_retrieval(_GT_PATH, fn, queries, k_values=k_values)
-        out_modes[name] = res["aggregate"]
+        out_modes[name] = _inline_evaluate(fn, queries, job_categories, resume_cat_map, k_values)
 
     _eval_cache = {
         "modes":       out_modes,

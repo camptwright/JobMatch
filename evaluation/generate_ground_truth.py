@@ -145,7 +145,7 @@ def generate_ground_truth(resumes_csv, jobs_csv, output_path, num_queries=50, to
 
 			time.sleep(0.2)
 
-	with open(output_path, 'w', newline='') as f:
+	with open(output_path, 'w', newline='', encoding='utf-8') as f:
 		writer = csv.DictWriter(f, fieldnames=judgments[0].keys())
 		writer.writeheader()
 		writer.writerows(judgments)
@@ -202,7 +202,7 @@ def generate_category_ground_truth(resumes_csv, jobs_csv, output_path, num_queri
 				'relevance': grade,
 			})
 
-	with open(output_path, 'w', newline='') as f:
+	with open(output_path, 'w', newline='', encoding='utf-8') as f:
 		writer = csv.DictWriter(f, fieldnames=judgments[0].keys())
 		writer.writeheader()
 		writer.writerows(judgments)
