@@ -14,7 +14,7 @@
   <div class="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
     <div class="text-sm font-semibold text-slate-900 mb-2">Methodology</div>
     <div class="text-sm text-slate-600 space-y-1">
-      <p>Ground truth built via <strong>pooled retrieval</strong> — candidates drawn from both BM25F and semantic results to avoid favoring either system. Relevance grades are category-based (3 = same category, 1 = related category, 0 = different). Hybrid uses min-max normalized fusion (BM25F + semantic). Language Model uses Dirichlet smoothing (&mu;=2000).</p>
+      <p>Ground truth built via <strong>pooled retrieval</strong> - candidates drawn from both BM25F and semantic results to avoid favoring either system. Relevance grades are category-based (3 = same category, 1 = related category, 0 = different). Hybrid uses min-max normalized fusion (BM25F + semantic). Language Model uses Dirichlet smoothing (&mu;=2000).</p>
       <p class="mt-2">Metrics computed across all query resumes in the ground truth set at k = 5, 10, 20.</p>
     </div>
   </div>
@@ -102,10 +102,10 @@
             {% for label, _ in metric_rows %}
               <tr class="border-b border-slate-100 last:border-0">
                 <td class="px-5 py-3 font-mono text-xs text-slate-700">{{ label }}</td>
-                <td class="px-5 py-3 text-right text-slate-300">—</td>
-                <td class="px-5 py-3 text-right text-slate-300">—</td>
-                <td class="px-5 py-3 text-right text-slate-300">—</td>
-                <td class="px-5 py-3 text-right text-slate-300">—</td>
+                <td class="px-5 py-3 text-right text-slate-300">-</td>
+                <td class="px-5 py-3 text-right text-slate-300">-</td>
+                <td class="px-5 py-3 text-right text-slate-300">-</td>
+                <td class="px-5 py-3 text-right text-slate-300">-</td>
               </tr>
             {% endfor %}
           {% endif %}
@@ -139,7 +139,7 @@
         </svg>
         Running&hellip;`;
       status.className = 'px-5 py-4 border-t border-slate-200 text-sm text-slate-500';
-      status.textContent = 'Computing metrics across all three retrieval modes — this takes 10–20 seconds…';
+      status.textContent = 'Computing metrics across all three retrieval modes - this takes 10–20 seconds…';
 
       try {
         const resp = await fetch('/evaluate/run', { method: 'POST' });

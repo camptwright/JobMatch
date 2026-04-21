@@ -1,9 +1,10 @@
-# JobMatch — Resume & Job Retrieval System
+# JobMatch - Resume & Job Retrieval System
 
 CSCE 470 (Information Storage & Retrieval), Spring 2026, Texas A&M University.  
-Team: Brayden Bailey, Campbell Wright.
+Team: Brayden Bailey, Campbell Wright.  
+**Live demo:** https://jobmatch.fly.dev
 
-Bidirectional retrieval: upload a resume to find matching jobs, or paste a job description to find matching resumes. Built on BM25F (field-weighted inverted index), sentence-transformer embeddings, and a Dirichlet language model — fused in a hybrid mode with optional Rocchio query expansion and Learning-to-Rank reranking.
+Bidirectional retrieval: upload a resume to find matching jobs, or paste a job description to find matching resumes. Built on BM25F (field-weighted inverted index), sentence-transformer embeddings, and a Dirichlet language model - fused in a hybrid mode with optional Rocchio query expansion and Learning-to-Rank reranking.
 
 ---
 
@@ -11,7 +12,7 @@ Bidirectional retrieval: upload a resume to find matching jobs, or paste a job d
 
 - Python 3.10+
 - A Kaggle account (to download datasets)
-- An OpenAI API key (optional — only needed for GPT-scored ground truth)
+- An OpenAI API key (optional - only needed for GPT-scored ground truth)
 
 ---
 
@@ -32,7 +33,7 @@ cp .env.example .env
 
 ### Verify algorithms without any data
 
-All retrieval engines have self-contained demos using synthetic data — no download required:
+All retrieval engines have self-contained demos using synthetic data - no download required:
 
 ```bash
 python -m engine.bm25f      # BM25F field-weighted ranking
@@ -48,7 +49,7 @@ python evaluation/evaluate.py  # NDCG / MAP / P@K metric sanity check
 
 ## Datasets
 
-Download each dataset and place it at the exact path shown — Kaggle wraps downloads in a folder of the same name, so the nested paths below are intentional.
+Download each dataset and place it at the exact path shown - Kaggle wraps downloads in a folder of the same name, so the nested paths below are intentional.
 
 | Dataset | Source | Records | Place at |
 |---------|--------|---------|----------|
@@ -65,7 +66,7 @@ Raw data is gitignored and never committed.
 
 Each step below builds on the previous one. Run them in order.
 
-### Step 1 — Preprocess
+### Step 1 - Preprocess
 
 Cleans raw CSVs: strips HTML from resumes, removes short/empty documents, normalizes category labels. Outputs to `data/processed/`.
 
@@ -73,7 +74,7 @@ Cleans raw CSVs: strips HTML from resumes, removes short/empty documents, normal
 python build.py --step preprocess
 ```
 
-### Step 2 — Build indexes
+### Step 2 - Build indexes
 
 Builds all retrieval indexes and writes them to `data/indexes/`:
 
@@ -85,23 +86,23 @@ Builds all retrieval indexes and writes them to `data/indexes/`:
 ```bash
 python build.py --step index
 
-# Accelerate semantic encoding on a GPU (recommended — CPU takes ~30-60 min for 107K jobs)
+# Accelerate semantic encoding on a GPU (recommended - CPU takes ~30-60 min for 107K jobs)
 python build.py --step index --device cuda
 ```
 
-### Step 3 — Generate ground truth
+### Step 3 - Generate ground truth
 
 Pools candidates from both BM25F and semantic retrieval, grades them by category match (3 = same, 1 = related, 0 = different), and writes `evaluation/ground_truth.csv`.
 
 ```bash
-# Category-based grades — free, instant, no API key needed
+# Category-based grades - free, instant, no API key needed
 python evaluation/generate_ground_truth.py --api category --num-queries 100
 
-# GPT-scored grades — requires OPENAI_API_KEY; ~$0.01-0.02 for 50 queries × 20 candidates
+# GPT-scored grades - requires OPENAI_API_KEY; ~$0.01-0.02 for 50 queries × 20 candidates
 python evaluation/generate_ground_truth.py --api openai --num-queries 50 --top-k 20
 ```
 
-### Step 4 — Evaluate retrieval
+### Step 4 - Evaluate retrieval
 
 Runs P@K, NDCG@K, and MAP across BM25F, Semantic, and Hybrid modes against `ground_truth.csv`.
 
@@ -109,7 +110,7 @@ Runs P@K, NDCG@K, and MAP across BM25F, Semantic, and Hybrid modes against `grou
 python build.py --step evaluate
 ```
 
-### Step 5 — Train the LTR reranker (optional)
+### Step 5 - Train the LTR reranker (optional)
 
 Trains a logistic Learning-to-Rank model on the ground truth. Requires ground truth from Step 3 and indexes from Step 2.
 
@@ -127,7 +128,7 @@ python build.py --step all
 
 ## Running the Web App
 
-### Option A — Use pre-built sample indexes (fastest, no raw data needed)
+### Option A - Use pre-built sample indexes (fastest, no raw data needed)
 
 The repo includes sample indexes built from a stratified 5,000-job subset. If they are present in `data/indexes/`, start the app directly:
 
@@ -142,7 +143,7 @@ python scripts/build_sample_indexes.py          # default: 5,000 jobs
 python scripts/build_sample_indexes.py --n-jobs 3000 --device cuda
 ```
 
-### Option B — Use full indexes (107K jobs)
+### Option B - Use full indexes (107K jobs)
 
 Run the full pipeline through Step 2, then start the app:
 
@@ -163,8 +164,8 @@ Four modes are available, selectable per query in the UI or via the `mode=` para
 
 | Mode | Algorithm | Best for |
 |------|-----------|----------|
-| `hybrid` | Min-max normalized BM25F + semantic fusion (default, α=0.5) | General-purpose — balances keyword precision and semantic recall |
-| `semantic` | Cosine similarity over `all-MiniLM-L6-v2` embeddings (384-dim) | Vocabulary mismatch — "ML" ↔ "machine learning", "Postgres" ↔ "PostgreSQL" |
+| `hybrid` | Min-max normalized BM25F + semantic fusion (default, α=0.25) | General-purpose - balances keyword precision and semantic recall |
+| `semantic` | Cosine similarity over `all-MiniLM-L6-v2` embeddings (384-dim) | Vocabulary mismatch - "ML" ↔ "machine learning", "Postgres" ↔ "PostgreSQL" |
 | `bm25f` | Field-weighted BM25 (title ×3.0, description ×1.0) | Exact terminology, skill keywords, job titles |
 | `lm` | Dirichlet-smoothed unigram language model (µ=2000) | Probabilistic scoring; handles rare and unseen terms via collection smoothing |
 
@@ -184,17 +185,17 @@ Jobs and resumes are partitioned into 50 topic clusters using k-means over the s
 
 ## Evaluation Results
 
-Evaluated on 48 query resumes across 24 job categories. Ground truth pooled from BM25F and semantic candidates with category-based relevance grades.
+Evaluated on 20 queries via the live `/evaluate/run` endpoint. Ground truth pooled from BM25F and semantic candidates with category-based relevance grades (3 = same category, 1 = related, 0 = different).
 
-| Metric | BM25F | Semantic | Hybrid |
-|--------|-------|----------|--------|
-| P@5 | 0.296 | **0.421** | 0.367 |
-| P@10 | 0.288 | **0.442** | 0.358 |
-| NDCG@10 | 0.313 | **0.458** | 0.369 |
-| NDCG@20 | 0.358 | **0.487** | 0.429 |
-| MAP | 0.185 | **0.321** | 0.225 |
+| Metric   | BM25F | Semantic  | Hybrid    | LM    |
+|----------|-------|-----------|-----------|-------|
+| P@5      | 0.330 | **0.550** | 0.530     | 0.280 |
+| P@10     | 0.275 | 0.505     | **0.515** | 0.260 |
+| NDCG@10  | 0.297 | **0.536** | 0.535     | 0.276 |
+| NDCG@20  | 0.285 | **0.487** | 0.484     | 0.279 |
+| MAP      | 0.023 | **0.046** | 0.045     | 0.025 |
 
-Semantic outperforms BM25F by ~15 NDCG points across the board, consistent with vocabulary mismatch being the dominant challenge in resume-job matching. The live **Evaluate** page in the web app runs all four modes (including Language Model) against ground truth in real time.
+Semantic ≈ Hybrid across all metrics. Both outperform BM25F and LM by ~80% on NDCG@10, confirming that vocabulary mismatch is the dominant challenge in resume-job matching. The live **Evaluate** page in the web app runs all four modes against ground truth in real time.
 
 ---
 
@@ -204,7 +205,7 @@ Semantic outperforms BM25F by ~15 NDCG points across the board, consistent with 
 jobmatch/
 ├── build.py                         # Pipeline: preprocess / index / evaluate / ltr / demo
 ├── requirements.txt
-├── .env.example                     # Copy to .env — set OPENAI_API_KEY for GPT scoring
+├── .env.example                     # Copy to .env - set OPENAI_API_KEY for GPT scoring
 │
 ├── engine/
 │   ├── bm25f.py                     # BM25F inverted index, multi-field weighting
@@ -224,12 +225,12 @@ jobmatch/
 │   └── generate_figures.py          # EDA figures
 │
 ├── data/
-│   ├── raw/                         # NOT in git — download from Kaggle/GitHub
-│   ├── processed/                   # NOT in git — generated by preprocess.py
+│   ├── raw/                         # NOT in git - download from Kaggle/GitHub
+│   ├── processed/                   # NOT in git - generated by preprocess.py
 │   └── indexes/                     # Pre-built sample indexes committed for demo
 │
 └── app/
-    ├── server.py                    # Flask app — lazy index loading, all retrieval modes
+    ├── server.py                    # Flask app - lazy index loading, all retrieval modes
     └── templates/
         ├── base.html
         ├── index.html               # Search form with mode selector and PRF toggle

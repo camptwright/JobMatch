@@ -155,4 +155,4 @@ if __name__ == '__main__':
 		print('  {:20s} {:.4f}'.format(label, val))
 
 	print('\nTo train: python build.py --step ltr')
-	print('Requires ground_truth.csv — run: python evaluation/generate_ground_truth.py --api category')
+	print('Requires ground_truth.csv - run: python evaluation/generate_ground_truth.py --api category')

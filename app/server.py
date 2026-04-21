@@ -14,7 +14,7 @@ _INDEX_DIR = os.path.join(_ROOT, "data", "indexes")
 from flask import Flask, render_template, request, jsonify
 
 # ---------------------------------------------------------------------------
-# Index state — loaded once on first request, reused forever.
+# Index state - loaded once on first request, reused forever.
 # ---------------------------------------------------------------------------
 _job_retriever    = None
 _resume_retriever = None
@@ -22,7 +22,7 @@ _semantic_available = False
 _retrievers_loaded  = False
 _load_error         = None
 
-# Evaluation cache — populated on first /evaluate/run, then served instantly.
+# Evaluation cache - populated on first /evaluate/run, then served instantly.
 _eval_cache = None
 
 

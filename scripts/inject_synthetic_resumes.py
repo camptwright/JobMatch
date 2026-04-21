@@ -652,7 +652,7 @@ def main(dry_run: bool = False) -> None:
         )
         print("Saved resumes_clusters.npz")
     except ImportError:
-        print("sentence-transformers not installed — skipping semantic + cluster indexes.")
+        print("sentence-transformers not installed - skipping semantic + cluster indexes.")
 
     try:
         from engine.lm import build_resume_lm_index
@@ -663,7 +663,7 @@ def main(dry_run: bool = False) -> None:
     except Exception as e:
         print(f"LM index skipped: {e}")
 
-    print("\n=== Done — resume indexes rebuilt ===")
+    print("\n=== Done - resume indexes rebuilt ===")
     print(f"Added per category:")
     for cat, n in by_cat.items():
         print(f"  {cat}: {n}")

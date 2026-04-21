@@ -109,7 +109,7 @@ def build(n_jobs: int = 5000, seed: int = 42, device: str = None):
 
     os.remove(tmp_jobs)
 
-    # ── Resumes (full — only 2,484 rows, always fits) ──────────────────────
+    # ── Resumes (full - only 2,484 rows, always fits) ──────────────────────
     print("\n--- Building resume BM25F index ---")
     resume_bm25 = build_resume_index(resumes_csv)
     resume_bm25.save(os.path.join(INDEX_DIR, "resumes_bm25f.pkl"))
