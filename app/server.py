@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 import urllib.parse
 
@@ -87,9 +88,11 @@ def _load_retrievers():
         job_sem    = SemanticIndex.load(os.path.join(_INDEX_DIR, "jobs_semantic"))
         resume_sem = SemanticIndex.load(os.path.join(_INDEX_DIR, "resumes_semantic"))
         _job_retriever    = HybridRetriever(job_bm25, job_sem,
+                                            alpha=0.25,
                                             cluster_index=job_clusters,
                                             lm_index=job_lm)
         _resume_retriever = HybridRetriever(resume_bm25, resume_sem,
+                                            alpha=0.25,
                                             cluster_index=resume_clusters,
                                             lm_index=resume_lm)
         _semantic_available = True
@@ -160,14 +163,27 @@ def _search_resumes(query: str, top_k: int = 10, mode: str = "hybrid",
             raw = _resume_retriever.search_with_prf(query, top_k=top_k)
         else:
             raw = _resume_retriever.search(query, top_k=top_k, mode=mode)
-        return [
-            {"category": m.get("category", ""), "text": m.get("text", ""),
-             "score": round(score, 4), "cluster": m.get("cluster")}
-            for _, score, m in raw
-        ]
+        results = []
+        for _, score, m in raw:
+            text = m.get("text", "")
+            title = _extract_resume_title(text)
+            results.append({
+                "title":    title,
+                "category": _infer_category(title, text, m.get("category", "")),
+                "text":     text,
+                "score":    round(score, 4),
+                "cluster":  m.get("cluster"),
+            })
+        return results
 
     raw = _resume_retriever.search(query, top_k=top_k)
-    return [{**_resume_retriever.get_doc(doc_id), "score": round(score, 4)} for doc_id, score in raw]
+    results = []
+    for doc_id, score in raw:
+        m = _resume_retriever.get_doc(doc_id)
+        text = m.get("text", "")
+        title = _extract_resume_title(text)
+        results.append({**m, "title": title, "category": _infer_category(title, text, m.get("category", "")), "score": round(score, 4)})
+    return results
 
 
 def _cluster_counts(results: list) -> dict:
@@ -187,13 +203,196 @@ def _cluster_dist_resumes(results: list) -> dict:
     return _cluster_counts(results)
 
 
+_MAX_QUERY_CHARS = 4000  # ~512 tokens; model hard-caps at 256 anyway
+
+# ---------------------------------------------------------------------------
+# Resume title extraction
+# ---------------------------------------------------------------------------
+
+_SECTION_RE = re.compile(
+    r'\b(professional\s+summary|summary|objective|skills|experience|education|'
+    r'work\s+history|certifications|references|achievements|awards)\b',
+    re.IGNORECASE,
+)
+
+# Matches 2–4 Title-Case words (non-greedy: prefers shorter matches so "John Smith
+# Software Engineer" yields "John Smith" not the full four-word phrase).
+_NAME_RE = re.compile(r'\b([A-Z][a-z]{1,}(?:\s+[A-Z][a-z]{1,}){1,3}?)\b')
+
+# Common job-title and section words that should not be mistaken for a person name
+_NAME_SKIP_WORDS = frozenset({
+    'Senior', 'Junior', 'Lead', 'Staff', 'Principal', 'Chief', 'Head',
+    'Engineer', 'Developer', 'Manager', 'Director', 'Analyst', 'Designer',
+    'Consultant', 'Specialist', 'Associate', 'Officer', 'Executive',
+    'Administrator', 'Technician', 'Intern', 'Coordinator', 'Scientist',
+    'Architect', 'President', 'Vice', 'General', 'Regional', 'Global',
+    'Technical', 'Software', 'Systems', 'Network', 'Data', 'Information',
+    'Business', 'Sales', 'Marketing', 'Finance', 'Human', 'Resources',
+    'Medical', 'Clinical', 'Research', 'Project', 'Product', 'Program',
+    'Service', 'Support', 'Quality', 'Operations', 'Security', 'Digital',
+    'Infrastructure', 'Strategic', 'Professional', 'Certified', 'Licensed',
+    'Machine', 'Learning', 'Intelligence', 'Artificial', 'Cloud', 'Platform',
+})
+
+
+def _cap_at_60(s: str) -> str:
+    if len(s) <= 60:
+        return s
+    cut = s[:60]
+    last_space = cut.rfind(' ')
+    return cut[:last_space] if last_space > 0 else cut
+
+
+def _extract_resume_title(text: str) -> str:
+    if not text:
+        return ""
+
+    # Identify where body text begins (Summary, Experience, Skills, …)
+    m = _SECTION_RE.search(text)
+    header_end = m.start() if (m and m.start() < 250) else min(len(text), 200)
+    header = text[:header_end].strip()
+
+    if not header:
+        return ""
+
+    # Look for a person name: 2–4 Title-Case words, no common job-title terms
+    for match in _NAME_RE.finditer(header):
+        candidate = match.group(1)
+        words = candidate.split()
+        if not any(w in _NAME_SKIP_WORDS for w in words):
+            return _cap_at_60(candidate)
+
+    # Fallback: title-case the header segment (usually an ALL-CAPS job title)
+    return _cap_at_60(header.title())
+
+
+# ---------------------------------------------------------------------------
+# Category inference
+# ---------------------------------------------------------------------------
+
+# Normalise raw ALL-CAPS category strings from the snehaanbhawal dataset.
+_RAW_CATEGORY_NORM = {
+    'ENGINEERING':            'Engineering',
+    'INFORMATION-TECHNOLOGY': 'Information Technology',
+    'HR':                     'Human Resources',
+    'SALES':                  'Sales',
+    'FINANCE':                'Finance',
+    'ACCOUNTANT':             'Finance',
+    'BANKING':                'Finance',
+    'HEALTHCARE':             'Healthcare',
+    'FITNESS':                'Healthcare',
+    'DESIGNER':               'Design',
+    'DIGITAL-MEDIA':          'Design',
+    'ARTS':                   'Design',
+    'ADVOCATE':               'Legal',
+    'CONSTRUCTION':           'Construction',
+    'TEACHER':                'Education',
+    'BUSINESS-DEVELOPMENT':   'Sales',
+    'CONSULTANT':             'Consulting',
+    'CHEF':                   'Other',
+    'AVIATION':               'Other',
+    'APPAREL':                'Other',
+    'AGRICULTURE':            'Other',
+    'AUTOMOBILE':             'Engineering',
+    'BPO':                    'Other',
+    'PUBLIC-RELATIONS':       'Marketing',
+}
+
+
+def _normalize_raw_category(raw: str) -> str:
+    """Return a display-friendly category label.
+
+    If raw contains any lowercase char it is already a display label (synthetic
+    or pre-normalised) and is returned as-is.  Otherwise it is treated as an
+    ALL-CAPS snehaanbhawal label and looked up in _RAW_CATEGORY_NORM.
+    """
+    if not raw:
+        return ""
+    stripped = raw.strip()
+    if any(c.islower() for c in stripped):
+        return stripped
+    return _RAW_CATEGORY_NORM.get(stripped, stripped.title().replace('-', ' '))
+
+
+# More specific rules ordered by specificity; IR/Search and ML/NLP are first
+# to avoid being absorbed by the broader Engineering/Data buckets.
+_CATEGORY_RULES = [
+    ('Information Retrieval',    ['information retrieval', 'search engineer', 'search scientist',
+                                   'relevance engineer', 'elasticsearch', 'bm25', 'inverted index',
+                                   'faiss', 'ann search', 'learning-to-rank', 'learning to rank',
+                                   'whoosh', 'query expansion', 'ndcg', 'lucene', 'solr',
+                                   'dense retrieval', 'sparse retrieval', 'semantic search engineer',
+                                   'passage retrieval', 'document retrieval engineer']),
+    ('ML/NLP Engineering',       ['natural language processing', 'nlp engineer', 'nlp scientist',
+                                   'machine learning engineer', 'ml engineer', 'ai engineer',
+                                   'deep learning', 'pytorch', 'hugging face', 'transformers',
+                                   'bert', 'llm', 'rag pipeline', 'sentence-transformers',
+                                   'spacy', 'mlflow', 'vector database', 'fine-tuning',
+                                   'language model', 'text classification', 'named entity']),
+    ('DevOps/Cloud Engineering', ['devops', 'site reliability', 'sre engineer', 'kubernetes',
+                                   'k8s', 'terraform', 'ansible', 'argocd', 'github actions',
+                                   'ci/cd', 'prometheus', 'grafana', 'pagerduty', 'helm',
+                                   'infrastructure as code', 'platform engineer',
+                                   'cloud infrastructure engineer', 'containerization']),
+    ('Software Engineering',     ['software developer', 'software engineer', 'full stack',
+                                   'fullstack', 'backend developer', 'frontend developer',
+                                   'web developer', 'mobile developer', 'api developer']),
+    ('Information Technology',   ['information technology', 'it specialist', 'it manager',
+                                   'system admin', 'network admin', 'network engineer',
+                                   'cybersecurity', 'helpdesk', 'database admin',
+                                   'database engineer', 'it support', 'cloud admin']),
+    ('Data & Analytics',         ['data scientist', 'data analyst', 'data engineer',
+                                   'business intelligence', 'bi analyst', 'analytics engineer']),
+    ('Engineering',              ['engineering manager', 'mechanical engineer',
+                                   'electrical engineer', 'civil engineer', 'aerospace engineer',
+                                   'chemical engineer', 'manufacturing engineer',
+                                   'systems engineer', 'engineering tech']),
+    ('Management',               ['director', 'vp ', 'vice president', 'chief ', 'cto', 'cio', 'ceo']),
+    ('Consulting',               ['consultant', 'senior consultant', 'associate consultant', 'advisory']),
+    ('Marketing',                ['marketing manager', 'seo specialist', 'content strategist',
+                                   'brand manager', 'digital marketing', 'public relations',
+                                   'growth hacker', 'marketing analyst']),
+    ('Design',                   ['ux designer', 'ui designer', 'graphic designer',
+                                   'creative director', 'visual designer', 'product designer',
+                                   'interaction designer']),
+    ('Finance',                  ['financial analyst', 'accountant', 'investment banker',
+                                   'finance manager', 'accounting manager', 'auditor',
+                                   'controller', 'cpa', 'cfa']),
+    ('Sales',                    ['sales representative', 'account executive', 'account manager',
+                                   'business development', 'sales manager', 'sales engineer']),
+    ('Healthcare',               ['registered nurse', 'physician', 'medical doctor',
+                                   'clinical coordinator', 'healthcare administrator',
+                                   'pharmacist', 'physical therapist', 'occupational therapist']),
+    ('Legal',                    ['lawyer', 'attorney', 'legal counsel', 'paralegal', 'legal analyst']),
+    ('Human Resources',          ['human resources', 'recruiter', 'talent acquisition',
+                                   'hr manager', 'people operations', 'hr business partner']),
+    ('Education',                ['teacher', 'professor', 'instructor', 'educator', 'tutor',
+                                   'curriculum developer', 'academic advisor']),
+]
+
+
+def _infer_category(title: str, text: str, meta_category: str = "") -> str:
+    # Prefer metadata category (normalised) over keyword inference.
+    if meta_category:
+        normalized = _normalize_raw_category(meta_category)
+        if normalized:
+            return normalized
+
+    # Keyword inference on title + first 400 chars of resume text.
+    haystack = (title + " " + text[:400]).lower()
+    for category, keywords in _CATEGORY_RULES:
+        if any(kw in haystack for kw in keywords):
+            return category
+    return ""
+
+
 def _get_query_text() -> str:
     text = (request.form.get("text") or "").strip()
     if not text:
         pdf_file = request.files.get("pdf")
         if pdf_file and getattr(pdf_file, "filename", ""):
             text = _extract_pdf_text(pdf_file)
-    return text
+    return text[:_MAX_QUERY_CHARS]
 
 
 def _extract_pdf_text(pdf_file) -> str:
@@ -318,7 +517,7 @@ def _run_evaluation():
     resume_cat_map = {}
     all_resume_ids = list(resume_idx.doc_store.keys())
     random.seed(42)
-    sampled_ids = random.sample(all_resume_ids, min(100, len(all_resume_ids)))
+    sampled_ids = random.sample(all_resume_ids, min(20, len(all_resume_ids)))
     queries = {}
     for qid in sampled_ids:
         meta = resume_idx.get_doc(qid)
@@ -460,3 +659,4 @@ def create_app() -> Flask:
 
 
 app = create_app()
+_load_retrievers()

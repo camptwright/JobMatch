@@ -72,25 +72,35 @@ def step_ltr():
 	print('\nLTR model saved to', ltr_path)
 
 
-def step_index(device=None):
+def step_index(device=None, resume_only=False):
 	print('\n' + '='*60)
-	print('  STEP 2: Building Indexes')
+	if resume_only:
+		print('  STEP 2: Building Resume Indexes Only')
+	else:
+		print('  STEP 2: Building Indexes')
 	print('='*60)
 	os.makedirs(INDEX_DIR, exist_ok=True)
 
 	jobs_csv = os.path.join(PROC_DIR, 'jobs_clean.csv')
 	resumes_csv = os.path.join(PROC_DIR, 'resumes_clean.csv')
 
-	for path, name in [(jobs_csv, 'Jobs'), (resumes_csv, 'Resumes')]:
-		if not os.path.exists(path):
-			print('ERROR: {} data not found at {}. Run preprocess first.'.format(name, path))
+	if not resume_only:
+		for path, name in [(jobs_csv, 'Jobs'), (resumes_csv, 'Resumes')]:
+			if not os.path.exists(path):
+				print('ERROR: {} data not found at {}. Run preprocess first.'.format(name, path))
+				return
+	else:
+		if not os.path.exists(resumes_csv):
+			print('ERROR: Resume data not found at {}. Run preprocess first.'.format(resumes_csv))
 			return
 
-	from engine.bm25f import build_job_index, build_resume_index
+	from engine.bm25f import build_resume_index
 
-	print('\n--- Job Posting Index (BM25F) ---')
-	job_idx = build_job_index(jobs_csv)
-	job_idx.save(os.path.join(INDEX_DIR, 'jobs_bm25f.pkl'))
+	if not resume_only:
+		from engine.bm25f import build_job_index
+		print('\n--- Job Posting Index (BM25F) ---')
+		job_idx = build_job_index(jobs_csv)
+		job_idx.save(os.path.join(INDEX_DIR, 'jobs_bm25f.pkl'))
 
 	print('\n--- Resume Index (BM25F) ---')
 	resume_idx = build_resume_index(resumes_csv)
@@ -98,23 +108,25 @@ def step_index(device=None):
 
 	job_sem = None
 	try:
-		from engine.semantic import build_job_semantic_index, build_resume_semantic_index
+		from engine.semantic import build_resume_semantic_index
+		from engine.cluster import build_cluster_index
 
-		print('\n--- Job Posting Index (Semantic) ---')
-		job_sem = build_job_semantic_index(jobs_csv, device=device)
-		job_sem.save(os.path.join(INDEX_DIR, 'jobs_semantic'))
+		if not resume_only:
+			from engine.semantic import build_job_semantic_index
+			print('\n--- Job Posting Index (Semantic) ---')
+			job_sem = build_job_semantic_index(jobs_csv, device=device)
+			job_sem.save(os.path.join(INDEX_DIR, 'jobs_semantic'))
+
+			print('\n--- Job Cluster Index (k-means, n=50) ---')
+			build_cluster_index(
+				job_sem,
+				n_clusters=50,
+				save_path=os.path.join(INDEX_DIR, 'jobs_clusters'),
+			)
 
 		print('\n--- Resume Index (Semantic) ---')
 		resume_sem = build_resume_semantic_index(resumes_csv, device=device)
 		resume_sem.save(os.path.join(INDEX_DIR, 'resumes_semantic'))
-
-		print('\n--- Job Cluster Index (k-means, n=50) ---')
-		from engine.cluster import build_cluster_index
-		build_cluster_index(
-			job_sem,
-			n_clusters=50,
-			save_path=os.path.join(INDEX_DIR, 'jobs_clusters'),
-		)
 
 		print('\n--- Resume Cluster Index (k-means, n=50) ---')
 		build_cluster_index(
@@ -127,10 +139,11 @@ def step_index(device=None):
 		print('\nWARNING: sentence-transformers not installed. Skipping semantic + cluster indexes.')
 		print('Install with: pip install sentence-transformers')
 
-	print('\n--- Job Posting Index (Language Model) ---')
-	from engine.lm import build_job_lm_index
-	job_lm = build_job_lm_index(jobs_csv)
-	job_lm.save(os.path.join(INDEX_DIR, 'jobs_lm.pkl'))
+	if not resume_only:
+		print('\n--- Job Posting Index (Language Model) ---')
+		from engine.lm import build_job_lm_index
+		job_lm = build_job_lm_index(jobs_csv)
+		job_lm.save(os.path.join(INDEX_DIR, 'jobs_lm.pkl'))
 
 	print('\n--- Resume Index (Language Model) ---')
 	from engine.lm import build_resume_lm_index
@@ -298,6 +311,11 @@ def main():
 		default=None,
 		help='Compute device for semantic encoding (default: auto-detect GPU, fall back to CPU)'
 	)
+	parser.add_argument(
+		'--resume-only',
+		action='store_true',
+		help='When used with --step index, rebuild only the resume indexes (leaves job indexes untouched)'
+	)
 	args = parser.parse_args()
 
 	if args.step == 'clean-all':
@@ -308,7 +326,7 @@ def main():
 		if args.step in ('all', 'preprocess'):
 			step_preprocess()
 		if args.step in ('all', 'index'):
-			step_index(device=args.device)
+			step_index(device=args.device, resume_only=args.resume_only)
 		if args.step in ('all', 'evaluate'):
 			step_evaluate()
 		if args.step in ('all', 'ltr'):
